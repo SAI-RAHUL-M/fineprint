@@ -16,8 +16,10 @@ services:
     source_dir: /
     dockerfile_path: Dockerfile
     http_port: 8080
+    # Smallest size ($5/mo, billed by the second). Plenty for this app: the models run on
+    # DigitalOcean Serverless Inference, not in this container. It can't scale past 1 container.
     instance_count: 1
-    instance_size_slug: apps-s-1vcpu-1gb
+    instance_size_slug: apps-s-1vcpu-0.5gb
     health_check:
       http_path: /healthz
       initial_delay_seconds: 10

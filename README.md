@@ -60,7 +60,9 @@ The app ships as a Docker image (`Dockerfile`) and an App Platform spec (`.do/ap
    ```
 3. In the app's Settings → Environment Variables, set `MODEL_ACCESS_KEY` (and `KB_ID`, `DO_API_TOKEN`
    once the knowledge base is ready). Mark the keys as encrypted.
-4. Every push to `main` redeploys. `GET /healthz` reports whether the model key and knowledge base are configured.
+4. If you create the app in the console instead of with the spec, set **Containers: 1** and the smallest
+   size (512 MB, `apps-s-1vcpu-0.5gb`); the console's default is larger than this app needs.
+5. Every push to `main` redeploys. `GET /healthz` reports whether the model key and knowledge base are configured.
 
 The spec sets `disable_edge_cache: true` because the analysis streams over Server-Sent Events,
 which the CDN cache would otherwise buffer. The server also sends a keep-alive comment every 10 seconds
