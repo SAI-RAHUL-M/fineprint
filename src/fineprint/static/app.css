@@ -30,16 +30,16 @@
   --desk: #1f1e1b;
   --paper: #2a2925;
   --paper-edge: #46423b;
-  --ink: #faf7f0;
-  --ink-2: #e4ded2;
-  --ink-3: #b9b0a0;
+  --ink: #efe6d6;
+  --ink-2: #d6ccbb;
+  --ink-3: #ada392;
   --rule: #3f3b35;
-  --pen: #ffaa9c;
+  --pen: #f2937c;
   --pen-wash: #4a2a24;
-  --marker: #76621a;
-  --marker-ink: #ffd970;
-  --ok: #a3d6b2;
-  --button: #faf7f0;
+  --marker: #6e5a1c;
+  --marker-ink: #f3c969;
+  --ok: #9fd0ab;
+  --button: #f2937c;
   --button-ink: #1f1e1b;
   color-scheme: dark;
 }
@@ -48,16 +48,16 @@
     --desk: #1f1e1b;
     --paper: #2a2925;
     --paper-edge: #46423b;
-    --ink: #faf7f0;
-    --ink-2: #e4ded2;
-    --ink-3: #b9b0a0;
+    --ink: #efe6d6;
+    --ink-2: #d6ccbb;
+    --ink-3: #ada392;
     --rule: #3f3b35;
-    --pen: #ffaa9c;
+    --pen: #f2937c;
     --pen-wash: #4a2a24;
-    --marker: #76621a;
-    --marker-ink: #ffd970;
-    --ok: #a3d6b2;
-    --button: #faf7f0;
+    --marker: #6e5a1c;
+    --marker-ink: #f3c969;
+    --ok: #9fd0ab;
+    --button: #f2937c;
     --button-ink: #1f1e1b;
     color-scheme: dark;
   }
@@ -420,3 +420,15 @@ textarea.is-dragging { border: 2px dashed var(--ink-3); background: var(--desk);
 .checklist li.done::after { content: none; }
 
 .how { max-width: 900px; }
+
+/* Header: a real button for How it works; the disclaimer reads as a quiet note, not a link. */
+.masthead-nav { align-items: center; }
+.masthead-nav a { padding: 7px 14px; border: 1px solid var(--rule); border-radius: 999px; color: var(--ink); font-weight: 500; }
+.masthead-nav a:hover { border-color: var(--ink); text-decoration: none; }
+.not-advice { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--ink-3); padding-left: 10px; border-left: 2px solid var(--pen); }
+
+/* Dark: a warm lamp glow at the top instead of a flat sheet. */
+:root[data-theme="dark"] body { background: radial-gradient(ellipse 120% 60% at 50% -10%, #2c2822, var(--desk) 70%) fixed, var(--desk); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body { background: radial-gradient(ellipse 120% 60% at 50% -10%, #2c2822, var(--desk) 70%) fixed, var(--desk); }
+}
