@@ -1,16 +1,24 @@
-// Fineprint client: posts the lease, reads the SSE stream, and renders clauses as verdicts arrive.
+// Fineprint client: posts the lease, reads the event stream, and marks up each clause as notes arrive.
 "use strict";
 
-const LABELS = { ask_about_this: "Ask about this", uncommon: "Uncommon", standard: "Standard" };
+const LABELS = { ask_about_this: "Ask about this", uncommon: "Unusual", standard: "Normal" };
 const SEVERITY = { standard: 0, uncommon: 1, ask_about_this: 2 };
-const ROLES = { juror_a: "Juror A", juror_b: "Juror B", fast: "Classifier / verifier", writer: "Writer" };
-const STAGES = ["split", "classify", "retrieve", "jury", "verify"];
-const RING = 2 * Math.PI * 52;
+const ROLES = { juror_a: "First reviewer", juror_b: "Second reviewer", fast: "Summaries & fact-check", writer: "Writer" };
+const NUMBERS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"];
+// Share of the progress bar each stage fills.
+const WEIGHT = { split: 5, classify: 15, retrieve: 10, jury: 60, verify: 10 };
+const STAGE_TEXT = {
+  split: "Reading your lease…",
+  classify: "Sorting clauses into rent, deposit, repairs and the rest…",
+  retrieve: "Pulling up the tenant guides for each clause…",
+  jury: "Two reviewers are going through every clause…",
+  verify: "Checking each note against the guide it cites…",
+};
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
-/** Tiny element builder; children may be strings, nodes, arrays or falsy. Text is never parsed as HTML. */
+/** Small element builder. Children may be strings, nodes, arrays or falsy; text is never parsed as HTML. */
 function h(tag, attrs = {}, ...children) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
@@ -20,7 +28,7 @@ function h(tag, attrs = {}, ...children) {
     else el.setAttribute(k, v === true ? "" : v);
   }
   for (const c of children.flat(Infinity)) {
-    if (c == null || c === false) continue;
+    if (c == null || c === false || c === "") continue;
     el.append(c instanceof Node ? c : document.createTextNode(String(c)));
   }
   return el;
@@ -32,12 +40,12 @@ const state = {
   report: null,
   selected: null,
   filter: "all",
-  running: false,
   controller: null,
+  progress: { done: new Set(), current: null, reviews: 0, reviewTotal: 0 },
   models: { juror_a: document.body.dataset.jurorA, juror_b: document.body.dataset.jurorB },
 };
 
-/* ---------- Input view ---------- */
+/* ---------- Start view ---------- */
 
 const form = $("#lease-form");
 const textarea = $("#lease-text");
@@ -58,8 +66,8 @@ $("#sample-btn").addEventListener("click", async () => {
 form.addEventListener("submit", (e) => {
   e.preventDefault();
   const text = textarea.value.trim();
-  if (text.length < 200) return showFormError("Paste the full lease text (at least a few paragraphs).");
-  if (text.length > 60000) return showFormError("That's longer than 60,000 characters. Try pasting the main lease without addenda.");
+  if (text.length < 200) return showFormError("That looks too short to be a lease. Paste the whole thing, not just one section.");
+  if (text.length > 60000) return showFormError("That's over 60,000 characters. Try pasting the main lease without the addenda.");
   analyze(text);
 });
 
@@ -76,6 +84,7 @@ function showFormError(msg) {
 
 function showView(name) {
   $("#view-input").hidden = name !== "input";
+  $("#how").hidden = name !== "input";
   $("#view-results").hidden = name !== "results";
   window.scrollTo({ top: 0 });
 }
@@ -85,7 +94,6 @@ function showView(name) {
 async function analyze(text) {
   resetResults();
   showView("results");
-  state.running = true;
   state.controller = new AbortController();
   $("#analyze-btn").disabled = true;
 
@@ -98,16 +106,15 @@ async function analyze(text) {
     });
     if (!res.ok) {
       const detail = await res.json().catch(() => ({}));
-      throw new Error(typeof detail.detail === "string" ? detail.detail : "The server couldn't analyze this lease.");
+      throw new Error(typeof detail.detail === "string" ? detail.detail : "Something went wrong on our end. Please try again.");
     }
     await readSSE(res.body, onEvent);
-    if (!state.report) throw new Error("The analysis stopped early. Please try again.");
+    if (!state.report) throw new Error("We lost the connection halfway through. Please try again.");
   } catch (err) {
     if (err.name === "AbortError") return;
     showView("input");
     showFormError(err.message);
   } finally {
-    state.running = false;
     $("#analyze-btn").disabled = false;
   }
 }
@@ -129,7 +136,7 @@ async function readSSE(body, handle) {
         if (line.startsWith("event:")) type = line.slice(6).trim();
         else if (line.startsWith("data:")) data += line.slice(5).trim();
       }
-      if (data) handle(type, JSON.parse(data));
+      if (data) handle(type, JSON.parse(data)); // keep-alive comments carry no data
     }
   }
 }
@@ -164,6 +171,8 @@ function onEvent(type, data) {
         aggregate(it);
         updateClause(it);
       });
+      state.progress.reviews += data.verdicts.length;
+      updateProgress();
       updateCounts();
       if (state.selected == null) renderPanel();
       return;
@@ -174,7 +183,7 @@ function onEvent(type, data) {
   }
 }
 
-/** Same rule as the server, so the document lights up while the jury is still deliberating. */
+/** Same rule as the server, so the page fills in while the reviewers are still reading. */
 function aggregate(it) {
   const flags = [it.a, it.b].filter((v) => v && v.label !== "standard");
   if (!it.a && !it.b) return;
@@ -191,10 +200,9 @@ function applyReport(report) {
     if (!it) continue;
     Object.assign(it, {
       cls: r.classification, passages: r.passages, a: r.juror_a, b: r.juror_b,
-      label: r.label, confidence: r.confidence, question: r.question_to_ask, unverified: r.unverified,
+      label: r.juror_a || r.juror_b ? r.label : "standard",
+      confidence: r.confidence, question: r.question_to_ask, unverified: r.unverified,
     });
-    // Clauses the jury skipped (title, boilerplate) are shown as standard.
-    if (!r.juror_a && !r.juror_b) it.label = "standard";
     updateClause(it);
   }
   // Show the model that actually answered (a fallback may have stepped in).
@@ -203,41 +211,81 @@ function applyReport(report) {
     if (call) state.models[role] = call.model;
   }
   updateCounts();
-  setScore(report.clarity_score);
-  const badge = $("#removed-badge");
-  badge.textContent = report.unsupported_removed
-    ? `${report.unsupported_removed} unsupported claim${report.unsupported_removed > 1 ? "s" : ""} removed`
-    : "All flags backed by sources";
-  badge.hidden = false;
+  writeVerdict(report);
+  $("#progress").hidden = true;
   renderModelCard(report);
   renderPanel();
 }
 
-/* ---------- Results rendering ---------- */
+function writeVerdict(report) {
+  const items = [...state.items.values()];
+  const ask = items.filter((i) => i.label === "ask_about_this").length;
+  const odd = items.filter((i) => i.label === "uncommon").length;
+  const word = (n) => NUMBERS[n] ?? String(n);
+
+  $("#kicker").textContent = "Your lease, marked up";
+  const verdict = $("#verdict");
+  verdict.replaceChildren(
+    ask === 0
+      ? "Nothing here needs a question."
+      : [h("em", {}, word(ask)), ask === 1 ? " thing worth asking about." : " things worth asking about."],
+  );
+  $("#verdict-sub").textContent = [
+    odd ? `${word(odd)} more ${odd === 1 ? "is" : "are"} a little unusual.` : "",
+    "The rest reads like a normal student lease.",
+  ].filter(Boolean).join(" ");
+
+  $("#score").hidden = false;
+  countUp($("#score-value"), report.clarity_score);
+
+  const checked = $("#removed-badge");
+  checked.textContent = report.unsupported_removed
+    ? `We softened ${word(report.unsupported_removed).toLowerCase()} note${report.unsupported_removed > 1 ? "s" : ""} we couldn't back up with a source.`
+    : "Every note was checked against its source.";
+  checked.hidden = false;
+}
+
+/* ---------- Progress ---------- */
+
+function setStage(name, status, detail) {
+  const p = state.progress;
+  if (status === "done") p.done.add(name);
+  if (status === "start") p.current = name;
+  if (name === "jury" && status === "start") p.reviewTotal = 2 * (parseInt(detail, 10) || 0);
+  updateProgress();
+}
+
+function updateProgress() {
+  const p = state.progress;
+  let pct = [...p.done].reduce((s, n) => s + (WEIGHT[n] ?? 0), 0);
+  if (p.current === "jury" && !p.done.has("jury") && p.reviewTotal) pct += WEIGHT.jury * Math.min(1, p.reviews / p.reviewTotal);
+  $("#progress-fill").style.width = `${Math.max(3, pct)}%`;
+
+  const stage = p.current && !p.done.has(p.current) ? p.current : "split";
+  let text = STAGE_TEXT[stage];
+  if (stage === "jury" && p.reviewTotal) text = `${text.slice(0, -1)} (${Math.min(p.reviews, p.reviewTotal)} of ${p.reviewTotal} reviews done)`;
+  $("#progress-text").textContent = text;
+}
+
+/* ---------- Document ---------- */
 
 function resetResults() {
-  Object.assign(state, { items: new Map(), order: [], report: null, selected: null, filter: "all" });
-  $("#document").replaceChildren(...Array.from({ length: 6 }, () => h("div", { class: "clause" }, h("div", { class: "skeleton", style: "width:40%" }), h("div", { class: "skeleton" }), h("div", { class: "skeleton", style: "width:85%" }))));
-  $$("#stages li").forEach((li) => { li.className = ""; $("small", li).textContent = ""; });
-  $("#score-value").textContent = "–";
-  const ring = $("#ring-fill");
-  ring.style.strokeDashoffset = RING;
-  ring.style.stroke = "";
+  Object.assign(state, {
+    items: new Map(), order: [], report: null, selected: null, filter: "all",
+    progress: { done: new Set(), current: null, reviews: 0, reviewTotal: 0 },
+  });
+  $("#document").replaceChildren(h("p", { class: "page-loading" }, "Reading your lease…"));
+  $("#kicker").textContent = "Reading your lease";
+  $("#verdict").textContent = "Give us a moment…";
+  $("#verdict-sub").textContent = "";
+  $("#score").hidden = true;
+  $("#progress").hidden = false;
   $("#removed-badge").hidden = true;
   $("#model-card").hidden = true;
+  updateProgress();
   setFilter("all");
   updateCounts();
   $("#panel-body").replaceChildren();
-}
-
-function setStage(name, status, detail) {
-  const li = $(`#stages li[data-stage="${name}"]`);
-  if (!li) return;
-  li.className = status === "start" ? "is-running" : status === "done" ? "is-done" : "";
-  if (detail) $("small", li).textContent = detail;
-  // A later stage starting implies earlier ones are done (split only reports "done").
-  const idx = STAGES.indexOf(name);
-  STAGES.slice(0, idx).forEach((s) => $(`#stages li[data-stage="${s}"]`).classList.replace("is-running", "is-done"));
 }
 
 function renderDocument() {
@@ -246,27 +294,23 @@ function renderDocument() {
 
 function clauseEl(it) {
   const c = it.clause;
-  const el = h("div", {
+  return h("div", {
     class: "clause", role: "button", tabindex: "0", "aria-pressed": "false", id: `clause-${c.id}`, "data-id": c.id,
     onclick: () => select(c.id),
     onkeydown: (e) => onClauseKey(e, c.id),
   },
     h("div", { class: "clause-head" },
-      h("span", { class: "clause-num" }, c.number ?? ""),
-      h("h3", { class: "clause-title" }, c.heading),
-      h("span", { class: "spacer" }),
-      h("span", { class: "dots", title: "Juror A, Juror B" }, h("i", { "data-j": "a", class: "pending" }), h("i", { "data-j": "b", class: "pending" })),
-      h("span", { class: "chip label", hidden: true }),
+      h("span", { class: "clause-num" }, c.number ? `${c.number}.` : ""),
+      h("h3", { class: "clause-title" }, h("span", {}, c.heading)),
+      h("span", { class: "tag waiting" }, "reading…"),
     ),
     h("p", { class: "clause-summary" }),
     h("p", { class: "clause-text" }, stripHeading(c)),
   );
-  return el;
 }
 
 function stripHeading(c) {
-  // The heading is shown separately; drop "5. CLEANING FEE." from the body text.
-  // No /i flag: the heading must be ALL CAPS so we never eat the first sentence.
+  // The heading is shown separately. No /i flag: it must be ALL CAPS so we never eat the first sentence.
   return c.text.replace(/^\s*(?:(?:Section|SECTION|Article|ARTICLE)\s+)?[0-9IVXLC.]+[.):\-]?\s*[A-Z0-9 ,&'/\-]{3,60}[.:]\s*/, "");
 }
 
@@ -275,17 +319,11 @@ function updateClause(it) {
   if (!el) return;
   el.className = `clause${it.label ? ` l-${it.label}` : ""}`;
   $(".clause-summary", el).textContent = it.cls?.summary ?? "";
-  for (const j of ["a", "b"]) {
-    const dot = $(`.dots i[data-j="${j}"]`, el);
-    dot.className = it[j] ? it[j].label : state.report ? "" : "pending";
+  const tag = $(".tag", el);
+  if (it.label) {
+    tag.className = `tag ${it.label}`;
+    tag.textContent = it.label === "standard" ? "normal" : LABELS[it.label].toLowerCase();
   }
-  if (state.report && !it.a && !it.b) $(".dots", el).hidden = true;
-  const chip = $(".chip.label", el);
-  if (it.label && it.label !== "standard") {
-    chip.className = `chip label ${it.label}`;
-    chip.textContent = LABELS[it.label];
-    chip.hidden = false;
-  } else chip.hidden = true;
   applyFilter(el, it);
   if (state.selected === it.clause.id) renderPanel();
 }
@@ -297,11 +335,11 @@ function updateCounts() {
   $("#n-uncommon").textContent = items.filter((i) => i.label === "uncommon").length;
 }
 
-$$(".counts .count").forEach((b) => b.addEventListener("click", () => setFilter(b.dataset.filter)));
+$$(".filters .filter").forEach((b) => b.addEventListener("click", () => setFilter(b.dataset.filter)));
 
 function setFilter(f) {
   state.filter = f;
-  $$(".counts .count").forEach((b) => {
+  $$(".filters .filter").forEach((b) => {
     const on = b.dataset.filter === f;
     b.classList.toggle("is-active", on);
     b.setAttribute("aria-pressed", on);
@@ -313,17 +351,12 @@ function applyFilter(el, it) {
   el.classList.toggle("is-dim", state.filter !== "all" && it.label !== state.filter);
 }
 
-function setScore(score) {
-  const ring = $("#ring-fill");
-  ring.style.stroke = score >= 80 ? "var(--standard)" : score >= 55 ? "var(--uncommon)" : "var(--ask)";
-  ring.style.strokeDashoffset = RING * (1 - score / 100);
-  const out = $("#score-value");
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduce) { out.textContent = score; return; }
+function countUp(out, target) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { out.textContent = target; return; }
   const t0 = performance.now();
   const tick = (t) => {
-    const p = Math.min(1, (t - t0) / 1200);
-    out.textContent = Math.round(score * (1 - Math.pow(1 - p, 3)));
+    const p = Math.min(1, (t - t0) / 900);
+    out.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
     if (p < 1) requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
@@ -349,18 +382,18 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && state.selected != null) { const id = state.selected; select(null); $(`#clause-${id}`)?.focus(); }
 });
 
-/* ---------- Panel ---------- */
+/* ---------- Notes column ---------- */
 
 function renderPanel() {
   const panel = $("#panel");
   const it = state.items.get(state.selected);
   panel.classList.toggle("is-open", !!it);
   panel.classList.toggle("is-summary", !it);
-  const parts = (it ? clausePanel(it) : summaryPanel()).flat(Infinity).filter((p) => p instanceof Node);
+  const parts = (it ? clauseNotes(it) : questionList()).flat(Infinity).filter((p) => p instanceof Node);
   $("#panel-body").replaceChildren(...parts);
 }
 
-function summaryPanel() {
+function questionList() {
   const flagged = [...state.items.values()]
     .filter((i) => i.question && i.label && i.label !== "standard")
     .sort((x, y) => SEVERITY[y.label] - SEVERITY[x.label]
@@ -369,86 +402,63 @@ function summaryPanel() {
 
   if (!flagged.length) {
     return [
-      h("h2", {}, "Questions to ask your landlord"),
-      state.report
-        ? h("p", { class: "empty" }, "Nothing stood out. This lease looks standard compared with the tenant guides we checked.")
-        : [h("p", { class: "empty" }, "Questions appear here as the jury deliberates."), h("div", { class: "skeleton" }), h("div", { class: "skeleton", style: "width:70%" })],
+      h("h2", {}, "Before you sign, ask"),
+      h("p", { class: "empty" }, state.report
+        ? "Nothing jumped out. This lease looks like most student leases we compared it against."
+        : "Questions will show up here as the reviewers find them."),
     ];
   }
   const text = flagged.map((i, n) => `${n + 1}. ${i.question}`).join("\n");
   return [
-    h("h2", {}, "Questions to ask your landlord"),
+    h("h2", {}, "Before you sign, ask"),
     h("ol", { class: "questions" }, flagged.map((i) =>
       h("li", {}, h("button", { type: "button", onclick: () => { select(i.clause.id); $(`#clause-${i.clause.id}`).scrollIntoView({ block: "center", behavior: "smooth" }); } },
         i.question,
-        h("small", {}, `${i.clause.heading} · ${LABELS[i.label]}${i.confidence === "high" ? " · both models agree" : ""}`),
+        h("small", {}, `${i.clause.number ? `§${i.clause.number} ` : ""}${i.clause.heading}`),
       )),
     )),
-    h("button", { type: "button", class: "btn ghost small", onclick: () => copy(text, "Questions copied") }, "Copy all questions"),
-    h("p", { class: "help", style: "margin-top:12px" }, "Select any clause to see why it was flagged and its sources."),
+    h("button", { type: "button", class: "btn quiet", onclick: () => copy(text, "Copied. Paste it into an email to your landlord.") }, "Copy these questions"),
   ];
 }
 
-function clausePanel(it) {
+function clauseNotes(it) {
   const c = it.clause;
   const cited = new Set([...(it.a?.cite_ids ?? []), ...(it.b?.cite_ids ?? [])]);
   const sources = it.passages.filter((p) => cited.has(p.id));
-  const juried = it.a || it.b;
+  const reviewed = it.a || it.b;
+  const agreement = { high: "both reviewers", maybe: "one of two reviewers", none: "" }[it.confidence];
 
   return [
-    h("button", { type: "button", class: "btn ghost small panel-close", onclick: () => select(null), "aria-label": "Close details" }, "Close"),
-    h("h2", {}, c.number ? `Section ${c.number}` : "Clause"),
+    h("button", { type: "button", class: "btn quiet panel-close", onclick: () => select(null) }, "Close"),
+    h("h2", {}, c.number ? `Section ${c.number}` : "Opening"),
     h("h3", {}, c.heading),
-    h("div", { class: "meta" },
-      it.label && h("span", { class: `chip ${it.label}` }, LABELS[it.label]),
-      it.cls && h("span", { class: "chip type" }, it.cls.type.replace(/_/g, " ")),
-      it.unverified && h("span", { class: "chip warn", title: "A model's cited source didn't support its explanation, so the citation was removed." }, "source not confirmed"),
+    it.label && h("p", { class: `note-label ${it.label}` }, LABELS[it.label], agreement && h("small", {}, `flagged by ${agreement}`)),
+    it.cls?.summary && h("p", { class: "plain" }, it.cls.summary),
+    it.unverified && h("p", { class: "unverified" }, "One reviewer's note didn't match its source, so we toned it down."),
+    it.question && h("div", { class: "ask-card" },
+      h("p", {}, `“${it.question}”`),
+      h("button", { type: "button", class: "btn quiet", onclick: () => copy(it.question, "Copied.") }, "Copy question"),
     ),
-    it.cls?.summary && h("p", {}, it.cls.summary),
-    juried && agreement(it),
-    it.question && h("div", { class: "ask-box" },
-      h("h4", {}, "Ask your landlord"),
-      h("p", {}, it.question),
-      h("button", { type: "button", class: "btn ghost small", onclick: () => copy(it.question, "Question copied") }, "Copy question"),
-    ),
-    juried
-      ? [jurorCard("a", it.a, it.passages), jurorCard("b", it.b, it.passages)]
-      : h("p", { class: "empty" }, state.report ? "Not reviewed: this part has nothing to ask about (title, signatures or boilerplate)." : "The jury is reviewing this clause…"),
+    reviewed
+      ? [reviewerNote("a", it.a, it.passages), reviewerNote("b", it.b, it.passages)]
+      : h("p", { class: "empty" }, state.report ? "Nothing to review here: it's the title, signatures or standard wording." : "Still reading this one…"),
     sources.length > 0 && h("div", { class: "sources" },
-      h("h2", {}, "Sources"),
-      sources.map((p) => h("blockquote", { class: "source" },
-        h("cite", {}, sourceLink(p)),
-        clip(p.text, 360),
-      )),
+      h("h2", {}, "From the guides"),
+      sources.map((p) => h("blockquote", { class: "source" }, h("cite", {}, sourceLink(p)), clip(p.text, 340))),
     ),
   ];
 }
 
-function agreement(it) {
-  const [title, sub] =
-    it.confidence === "high" ? ["Both models agree", "Two different model families flagged this independently."]
-    : it.confidence === "maybe" ? ["One model flagged this", "Worth a quick question, but the models disagree."]
-    : ["Both models say standard", "Nothing unusual compared with the guides."];
-  return h("div", { class: "agree" },
-    h("span", { class: "dots" }, h("i", { class: it.a?.label ?? "" }), h("i", { class: it.b?.label ?? "" })),
-    h("span", {}, h("strong", {}, title), sub),
-  );
-}
-
-function jurorCard(j, v, passages) {
+function reviewerNote(j, v, passages) {
   const role = `juror_${j}`;
-  return h("section", { class: "juror", "aria-label": ROLES[role] },
-    h("div", { class: "juror-head" },
-      h("span", {}, h("b", {}, ROLES[role]), " · ", h("code", {}, state.models[role] ?? "")),
-      v ? h("span", { class: `chip ${v.label}` }, LABELS[v.label]) : h("span", { class: "chip" }, state.report ? "no answer" : "thinking…"),
+  const cites = (v?.cite_ids ?? []).map((id) => passages.find((p) => p.id === id)).filter(Boolean);
+  return h("section", { class: "reviewer", "aria-label": ROLES[role] },
+    h("div", { class: "reviewer-head" },
+      h("span", {}, h("strong", {}, ROLES[role]), ` · ${state.models[role] ?? ""}`),
+      v ? h("span", { class: `tag ${v.label}` }, LABELS[v.label].toLowerCase()) : h("span", { class: "tag waiting" }, state.report ? "no answer" : "reading…"),
     ),
     v && h("p", {}, v.explanation),
-    v?.cite_ids?.length > 0 && h("div", { class: "cites" },
-      v.cite_ids.map((id) => {
-        const p = passages.find((x) => x.id === id);
-        return h("span", { class: "cite", title: p ? clip(p.text, 200) : id }, p ? sourceName(p) : id);
-      }),
-    ),
+    cites.length > 0 && h("p", { class: "cites" }, `Cites: ${cites.map(sourceName).join(", ")}`),
   );
 }
 
@@ -456,7 +466,7 @@ function sourceName(p) {
   if (/^https?:\/\//.test(p.source)) {
     try { return new URL(p.source).hostname.replace(/^www\./, ""); } catch { /* fall through */ }
   }
-  return p.title ? `${p.source} · ${p.title}` : p.source;
+  return p.title ? `${p.title} (${p.source})` : p.source;
 }
 
 function sourceLink(p) {
@@ -467,7 +477,7 @@ function sourceLink(p) {
 
 const clip = (s, n) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
-/* ---------- Model card ---------- */
+/* ---------- Under the hood ---------- */
 
 function renderModelCard(report) {
   const groups = new Map();
@@ -480,15 +490,15 @@ function renderModelCard(report) {
   const rows = [...groups.values()];
   const tokens = rows.reduce((s, g) => s + g.inp + g.out, 0);
   const models = new Set(rows.map((g) => g.model)).size;
-  $("#model-summary").textContent = `${report.calls.length} calls · ${models} open-weight models · ${tokens.toLocaleString()} tokens`;
+  $("#model-summary").textContent = `${models} open-weight models, ${report.calls.length} calls, ${tokens.toLocaleString()} tokens`;
   $("#model-rows").replaceChildren(...rows.map((g) => h("tr", {},
     h("td", {}, ROLES[g.role] ?? g.role),
     h("td", {}, h("code", {}, g.model)),
-    h("td", {}, `${(g.ms / g.n / 1000).toFixed(1)} s avg × ${g.n}`),
+    h("td", {}, `${(g.ms / g.n / 1000).toFixed(1)}s avg × ${g.n}`),
     h("td", {}, `${g.inp.toLocaleString()} / ${g.out.toLocaleString()}`),
     h("td", {}, [g.fb && `${g.fb} fallback`, g.rep && `${g.rep} repaired`].filter(Boolean).join(", ") || "–"),
   )));
-  $("#retrieval-src").textContent = report.retrieval_source;
+  $("#retrieval-src").textContent = report.retrieval_source === "local" ? "our bundled guide" : report.retrieval_source;
   $("#model-card").hidden = false;
 }
 
@@ -505,5 +515,5 @@ function toast(msg) {
   t.textContent = msg;
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (t.hidden = true), 2200);
+  toastTimer = setTimeout(() => (t.hidden = true), 2400);
 }
