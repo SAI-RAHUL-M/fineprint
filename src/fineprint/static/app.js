@@ -151,6 +151,7 @@ function onEvent(type, data) {
         state.order.push(c.id);
       });
       renderDocument();
+      updateCounts();
       return renderPanel();
     case "classified":
       data.items.forEach((cls) => {
@@ -226,9 +227,9 @@ function writeVerdict(report) {
   $("#kicker").textContent = "Your lease, marked up";
   const verdict = $("#verdict");
   verdict.replaceChildren(
-    ask === 0
-      ? "Nothing here needs a question."
-      : [h("em", {}, word(ask)), ask === 1 ? " thing worth asking about." : " things worth asking about."],
+    ...(ask === 0
+      ? ["Nothing here needs a question."]
+      : [h("em", {}, word(ask)), ask === 1 ? " thing worth asking about." : " things worth asking about."]),
   );
   $("#verdict-sub").textContent = [
     odd ? `${word(odd)} more ${odd === 1 ? "is" : "are"} a little unusual.` : "",
@@ -311,7 +312,9 @@ function clauseEl(it) {
 
 function stripHeading(c) {
   // The heading is shown separately. No /i flag: it must be ALL CAPS so we never eat the first sentence.
-  return c.text.replace(/^\s*(?:(?:Section|SECTION|Article|ARTICLE)\s+)?[0-9IVXLC.]+[.):\-]?\s*[A-Z0-9 ,&'/\-]{3,60}[.:]\s*/, "");
+  return c.text
+    .replace(/^\s*(?:(?:Section|SECTION|Article|ARTICLE)\s+)?[0-9IVXLC.]+[.):\-]?\s*[A-Z0-9 ,&'/\-]{3,60}[.:]\s*/, "")
+    .replace(/\n{2,}/g, "\n");
 }
 
 function updateClause(it) {
@@ -320,9 +323,15 @@ function updateClause(it) {
   el.className = `clause${it.label ? ` l-${it.label}` : ""}`;
   $(".clause-summary", el).textContent = it.cls?.summary ?? "";
   const tag = $(".tag", el);
-  if (it.label) {
+  if (it.label === "standard") {
+    // Normal clauses get a quiet tick, like a reader who's checked them and moved on.
+    tag.className = "tag standard";
+    tag.textContent = "✓";
+    tag.setAttribute("aria-label", "normal");
+  } else if (it.label) {
     tag.className = `tag ${it.label}`;
-    tag.textContent = it.label === "standard" ? "normal" : LABELS[it.label].toLowerCase();
+    tag.textContent = LABELS[it.label].toLowerCase();
+    tag.removeAttribute("aria-label");
   }
   applyFilter(el, it);
   if (state.selected === it.clause.id) renderPanel();
@@ -417,6 +426,10 @@ function questionList() {
         h("small", {}, `${i.clause.number ? `§${i.clause.number} ` : ""}${i.clause.heading}`),
       )),
     )),
+    flagged.length > 3 && h("button", {
+      type: "button", class: "btn quiet show-all",
+      onclick: (e) => { $(".questions").classList.add("is-expanded"); e.currentTarget.remove(); },
+    }, `Show all ${flagged.length} questions`),
     h("button", { type: "button", class: "btn quiet", onclick: () => copy(text, "Copied. Paste it into an email to your landlord.") }, "Copy these questions"),
   ];
 }

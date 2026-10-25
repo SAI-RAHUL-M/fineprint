@@ -165,7 +165,7 @@ mark, .hl { background: linear-gradient(104deg, transparent .4em, var(--marker) 
 .clause + .clause:hover, .clause[aria-pressed="true"] + .clause { border-top-color: transparent; }
 
 /* Notes column */
-.notes { position: sticky; top: 24px; max-height: calc(100vh - 48px); overflow: auto; padding: 4px 4px 24px; }
+.notes { position: sticky; top: 24px; max-height: calc(100vh - 48px); overflow: auto; padding: 4px 4px 24px; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
 .notes h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); margin: 0 0 12px; font-weight: 600; }
 .notes h3 { font-family: var(--serif); font-weight: 500; font-size: 28px; line-height: 1.15; margin: 0 0 10px; letter-spacing: -0.01em; }
 .notes p { margin: 0 0 14px; }
@@ -222,6 +222,12 @@ th { font-weight: 600; color: var(--ink-3); font-size: 12px; text-transform: upp
   .notes.is-summary { position: static; transform: none; max-height: none; box-shadow: none; border: 0; background: none; padding: 0; }
   .layout { display: flex; flex-direction: column-reverse; }
   .panel-close { display: inline-block; float: right; margin: -4px 0 0 12px; }
+  /* Questions sit above the lease on small screens, so keep the list short until asked. */
+  .questions:not(.is-expanded) li:nth-child(n+4) { display: none; }
+  .show-all { display: block; margin-bottom: 6px; }
+}
+@media (min-width: 981px) {
+  .show-all { display: none; }
 }
 @media (max-width: 680px) {
   .masthead-inner { padding: 14px 16px; }
