@@ -85,7 +85,7 @@ class SlowFakeLLM:
         user = messages[-1]["content"]
         meta = CallMeta(
             role=role,
-            model={"juror_a": "openai-gpt-oss-120b", "juror_b": "qwen3.5-397b-a17b"}.get(
+            model={"juror_a": "openai-gpt-oss-120b", "juror_b": "gemma-4-31B-it"}.get(
                 role, "openai-gpt-oss-20b"
             ),
             ms=random.randint(900, 4000),

@@ -19,7 +19,7 @@ Then you can:
 
 | Piece | Service |
 |---|---|
-| Jurors, classifier, verifier | Serverless Inference: `openai-gpt-oss-120b`, `qwen3.5-397b-a17b`, `openai-gpt-oss-20b` (with open-weight fallbacks) |
+| Jurors, classifier, verifier | Serverless Inference: `openai-gpt-oss-120b`, `gemma-4-31B-it`, `openai-gpt-oss-20b` (with open-weight fallbacks) |
 | Tenant guidance retrieval | Knowledge Bases (MCP retrieval), with a bundled local fallback |
 | Hosting | App Platform |
 
