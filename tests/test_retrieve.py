@@ -121,3 +121,18 @@ async def test_do_kb_tool_error_raises_so_fallback_kicks_in():
     )
     with pytest.raises(RuntimeError, match="KB tool error"):
         await kb.retrieve("q", 3)
+
+
+def test_merged_chunk_is_split_and_best_section_wins():
+    from fineprint.retrieve import Passage, _best_sections
+
+    merged = Passage(
+        id="kb:x",
+        source="lease-questions.md",
+        text="Lease Questions Guide\n\nIntro text.\n\nLate fees\n\nTypical: a grace period.\n\n"
+        "Landlord entry\n\nTypical: advance notice before entering.\n\nQuestions to ask: How much notice?",
+    )
+    top = _best_sections([merged], "Landlord entry without notice", 2)
+    assert top[0].title == "Landlord entry"
+    assert "advance notice" in top[0].text and "grace period" not in top[0].text
+    assert top[0].id.startswith("kb:") and top[0].source == "lease-questions.md"

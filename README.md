@@ -20,14 +20,14 @@ Then you can:
 | Piece | Service |
 |---|---|
 | Jurors, classifier, verifier | Serverless Inference: `openai-gpt-oss-120b`, `gemma-4-31B-it`, `openai-gpt-oss-20b` (with open-weight fallbacks) |
-| Tenant guidance retrieval | Knowledge Bases (MCP retrieval), with a bundled local fallback |
+| Guide retrieval | Knowledge Bases: `kb/lease-questions.md` indexed with GTE Large over OpenSearch, searched via the KB MCP endpoint; a bundled BM25 copy is the fallback |
 | Hosting | App Platform |
 
 ## Run locally
 
 ```bash
 uv sync
-cp .env.example .env   # add MODEL_ACCESS_KEY (and KB_ID / DO_API_TOKEN when ready)
+cp .env.example .env   # add MODEL_ACCESS_KEY; KB_ID + DO_API_TOKEN (GenAI read scope) to use the Knowledge Base
 uv run fineprint       # http://localhost:8000
 ```
 

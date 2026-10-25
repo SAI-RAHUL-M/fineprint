@@ -163,13 +163,13 @@ class DOKnowledgeBase:
         return await self._post("tools/call", {"name": "retrieve_knowledge_base", "arguments": args}) or {}
 
     async def retrieve(self, query: str, k: int) -> list[Passage]:
-        rpc = await self.call_raw(query, k)
+        rpc = await self.call_raw(query, k + 2)
         if "error" in rpc:
             raise RuntimeError(f"KB MCP error: {rpc['error']}")
         result = rpc.get("result", {})
         if result.get("isError"):
             raise RuntimeError(f"KB tool error: {str(result.get('content'))[:200]}")
-        return _passages_from_tool_result(result)[:k]
+        return _best_sections(_passages_from_tool_result(result), query, k)
 
 
 def _parse_rpc(body: str) -> dict[str, Any]:
@@ -214,8 +214,52 @@ def _passages_from_tool_result(result: dict[str, Any]) -> list[Passage]:
             or item.get("source")
             or "knowledge base"
         )
-        passages.append(Passage(id=_pid("kb", text), text=text.strip()[:1500], source=str(source)))
+        passages.append(Passage(id=_pid("kb", text), text=text.strip(), source=str(source)))
     return passages
+
+
+# A short line with no sentence punctuation, on its own between blank lines: a section heading.
+_HEADING = re.compile(r"^[A-Z][^\n.:?!]{1,48}$")
+
+
+def _sections(p: Passage) -> list[Passage]:
+    """Split a chunk that merged several guide sections back into one passage per section."""
+    blocks = [b.strip() for b in re.split(r"\n\s*\n", p.text) if b.strip()]
+    groups: list[list[str]] = []
+    for b in blocks:
+        if _HEADING.match(b) or not groups:
+            groups.append([b])
+        else:
+            groups[-1].append(b)
+    out = []
+    for g in groups:
+        title = g[0] if _HEADING.match(g[0]) else ""
+        text = "\n".join(g)
+        out.append(Passage(id=_pid("kb", text), text=text[:1500], source=p.source, title=title))
+    return out
+
+
+def _best_sections(chunks: list[Passage], query: str, k: int) -> list[Passage]:
+    """Rank the sections inside the KB's chunks by overlap with the query (title words count double).
+
+    The knowledge base does the search; this keeps citations pointed at the specific section that applies.
+    """
+    q = set(_tokens(query))
+    scored = []
+    for rank, chunk in enumerate(chunks):
+        for s in _sections(chunk):
+            overlap = len(q & set(_tokens(s.text))) + 2 * len(q & set(_tokens(s.title)))
+            scored.append((overlap, -rank, s))
+    scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    seen, out = set(), []
+    for overlap, _, s in scored:
+        if s.id in seen or (overlap == 0 and out):
+            continue
+        seen.add(s.id)
+        out.append(s)
+        if len(out) == k:
+            break
+    return out
 
 
 class FallbackRetriever:
