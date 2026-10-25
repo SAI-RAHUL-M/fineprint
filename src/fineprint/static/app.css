@@ -24,22 +24,41 @@
   color-scheme: light;
 }
 
+/* Dark: a lamp-lit desk rather than a black screen. Applied when chosen in the header,
+   or when the system prefers dark and the reader hasn't picked light. Keep both blocks in sync. */
+:root[data-theme="dark"] {
+  --desk: #22201c;
+  --paper: #2c2a25;
+  --paper-edge: #3d3932;
+  --ink: #f6f2e9;
+  --ink-2: #ddd6c8;
+  --ink-3: #b1a898;
+  --rule: #48433a;
+  --pen: #ff9f90;
+  --pen-wash: #4a2a24;
+  --marker: #7d6517;
+  --marker-ink: #ffd970;
+  --ok: #a3d6b2;
+  --button: #f6f2e9;
+  --button-ink: #22201c;
+  color-scheme: dark;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
-    --desk: #161512;
-    --paper: #1f1d19;
-    --paper-edge: #2c2924;
-    --ink: #ece7dc;
-    --ink-2: #c9c2b4;
-    --ink-3: #958d7f;
-    --rule: #34302a;
-    --pen: #ef8a7d;
-    --pen-wash: #3a1f1b;
-    --marker: #6b5716;
-    --marker-ink: #f3d675;
-    --ok: #8fbf9e;
-    --button: #ece7dc;
-    --button-ink: #161512;
+  :root:not([data-theme="light"]) {
+    --desk: #22201c;
+    --paper: #2c2a25;
+    --paper-edge: #3d3932;
+    --ink: #f6f2e9;
+    --ink-2: #ddd6c8;
+    --ink-3: #b1a898;
+    --rule: #48433a;
+    --pen: #ff9f90;
+    --pen-wash: #4a2a24;
+    --marker: #7d6517;
+    --marker-ink: #ffd970;
+    --ok: #a3d6b2;
+    --button: #f6f2e9;
+    --button-ink: #22201c;
     color-scheme: dark;
   }
 }
@@ -65,6 +84,10 @@ a { color: inherit; }
 .masthead-nav a { text-decoration: none; }
 .masthead-nav a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .not-advice { color: var(--ink-3); }
+.theme { display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; padding: 2px; align-self: center; }
+.theme button { border: 0; background: none; color: var(--ink-3); font-size: 13px; padding: 3px 10px; border-radius: 999px; cursor: pointer; }
+.theme button:hover { color: var(--ink); }
+.theme button[aria-checked="true"] { background: var(--ink); color: var(--paper); }
 
 /* Buttons */
 .btn { border: 0; background: none; cursor: pointer; font-weight: 600; border-radius: 4px; }
@@ -73,6 +96,10 @@ a { color: inherit; }
 .btn.primary:disabled { opacity: .55; cursor: progress; }
 .btn.link { padding: 12px 4px; color: var(--ink-2); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--rule); font-weight: 500; }
 .btn.link:hover { color: var(--ink); text-decoration-color: var(--ink); }
+.btn.secondary { border: 1px solid var(--ink); background: transparent; color: var(--ink); padding: 11px 18px; }
+.btn.secondary:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.next-steps { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 18px; padding-bottom: 18px; border-bottom: 1px solid var(--rule); }
+.next-steps .hint { flex-basis: 100%; margin: 2px 0 0; }
 .btn.quiet { padding: 6px 2px; color: var(--ink-2); font-weight: 500; font-size: 14px; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--rule); }
 .btn.quiet:hover { color: var(--ink); }
 .btn.small { font-size: 14px; }
@@ -207,9 +234,7 @@ mark, .hl { background: linear-gradient(104deg, transparent .4em, var(--marker) 
 .empty { font-family: var(--serif); font-style: italic; color: var(--ink-3); }
 
 /* Email */
-.email-start { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--rule); }
-.email-start .hint { margin-top: 10px; }
-.email { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--rule); }
+.email { margin: 0 0 22px; padding: 0 0 20px; border-bottom: 1px solid var(--rule); }
 .email-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
 .email-head h2 { margin: 0; }
 .tone { display: inline-flex; border: 1px solid var(--paper-edge); border-radius: 4px; overflow: hidden; }
@@ -226,8 +251,6 @@ mark, .hl { background: linear-gradient(104deg, transparent .4em, var(--marker) 
 .email-actions a.btn { text-decoration: underline; }
 
 /* Practice */
-.practice-start { margin-top: 18px; }
-.practice-start .btn.link { padding: 0; }
 .practice { width: min(1000px, calc(100vw - 32px)); height: min(760px, calc(100vh - 32px)); padding: 0; border: 1px solid var(--paper-edge); background: var(--paper); color: var(--ink); box-shadow: 0 30px 80px -30px rgb(20 15 5 / 50%); }
 .practice[open] { display: flex; flex-direction: column; }
 .practice::backdrop { background: rgb(29 27 23 / 45%); }
@@ -309,7 +332,7 @@ th { font-weight: 600; color: var(--ink-3); font-size: 12px; text-transform: upp
 }
 @media (max-width: 680px) {
   .masthead-inner { padding: 14px 16px; }
-  .masthead-nav a { display: none; }
+  .masthead-nav a, .not-advice { display: none; }
   .start, .how, .results { padding-left: 16px; padding-right: 16px; }
   .lede { font-size: 18px; }
   .how ol { grid-template-columns: 1fr; gap: 24px; }
@@ -330,7 +353,7 @@ th { font-weight: 600; color: var(--ink-3); font-size: 12px; text-transform: upp
 @media print {
   :root { --desk: #fff; --paper: #fff; }
   body { background: #fff; font-size: 11pt; }
-  .masthead-nav, .toolbar, .progress, .under-hood, .btn, .email, .email-start, .practice-start,
+  .masthead-nav, .toolbar, .progress, .next-steps, .under-hood, .btn, .email,
   .sheet-backdrop, .skip, .toast, .panel-close, dialog { display: none !important; }
   .results { padding: 0; max-width: none; }
   .layout { display: block; margin-top: 16px; }

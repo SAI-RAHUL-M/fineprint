@@ -49,6 +49,17 @@ const state = {
   models: { juror_a: document.body.dataset.jurorA, juror_b: document.body.dataset.jurorB },
 };
 
+/* ---------- Theme ---------- */
+
+function applyTheme(choice) {
+  if (choice === "auto") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = choice;
+  try { choice === "auto" ? localStorage.removeItem("fineprint-theme") : localStorage.setItem("fineprint-theme", choice); } catch { /* private mode */ }
+  $$("[data-theme-choice]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.themeChoice === choice)));
+}
+$$("[data-theme-choice]").forEach((b) => b.addEventListener("click", () => applyTheme(b.dataset.themeChoice)));
+applyTheme(document.documentElement.dataset.theme ?? "auto");
+
 /* ---------- Start view ---------- */
 
 const form = $("#lease-form");
@@ -464,6 +475,8 @@ function questionList() {
   const text = flagged.map((i, n) => `${n + 1}. ${i.question}`).join("\n");
   return [
     h("h2", {}, "Before you sign, ask"),
+    state.report && nextSteps(flagged),
+    state.report && emailBlock(flagged),
     h("ol", { class: "questions" }, flagged.map((i) =>
       h("li", {}, h("button", { type: "button", onclick: () => { select(i.clause.id); $(`#clause-${i.clause.id}`).scrollIntoView({ block: "center", behavior: "smooth" }); } },
         i.question,
@@ -475,10 +488,6 @@ function questionList() {
       onclick: (e) => { $(".questions").classList.add("is-expanded"); e.currentTarget.remove(); },
     }, `Show all ${flagged.length} questions`),
     h("button", { type: "button", class: "btn quiet", onclick: () => copy(text, "Copied.") }, "Copy these questions"),
-    state.report && h("div", { class: "practice-start" },
-      h("button", { type: "button", class: "btn link", onclick: () => openPractice(flagged) }, "Nervous about asking? Practice first"),
-    ),
-    state.report && emailBlock(flagged),
   ];
 }
 
@@ -544,14 +553,19 @@ function newEmail() {
   return { open: false, tone: "friendly", draft: null, loading: false, error: null, seq: 0 };
 }
 
+/** The two things to do with the questions, kept at the top of the notes so they're never scrolled away. */
+function nextSteps(flagged) {
+  const e = state.email;
+  return h("div", { class: "next-steps" },
+    !e.open && h("button", { type: "button", class: "btn primary", onclick: () => { e.open = true; draftEmail(flagged); } }, "Write the email for me"),
+    h("button", { type: "button", class: "btn secondary", onclick: () => openPractice(flagged) }, "Practice asking"),
+    !e.open && h("p", { class: "hint" }, "Turn these questions into an email, or rehearse the conversation first."),
+  );
+}
+
 function emailBlock(flagged) {
   const e = state.email;
-  if (!e.open) {
-    return h("div", { class: "email-start" },
-      h("button", { type: "button", class: "btn primary", onclick: () => { e.open = true; draftEmail(flagged); } }, "Write the email for me"),
-      h("p", { class: "hint" }, "We'll turn these questions into a short email you can edit and send."),
-    );
-  }
+  if (!e.open) return null;
   const tone = (t, label) => h("button", {
     type: "button", role: "radio", class: "tone-opt", "aria-checked": String(e.tone === t), disabled: e.loading,
     onclick: () => { if (e.tone !== t) { e.tone = t; draftEmail(flagged); } },
