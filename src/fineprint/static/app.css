@@ -432,3 +432,11 @@ textarea.is-dragging { border: 2px dashed var(--ink-3); background: var(--desk);
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) body { background: radial-gradient(ellipse 120% 60% at 50% -10%, #2c2822, var(--desk) 70%) fixed, var(--desk); }
 }
+
+/* Start over: a real button, pushed to the right of the toolbar. */
+#new-btn { margin-left: auto; padding: 8px 16px; font-size: 14px; }
+@media print { #new-btn { display: none; } }
+
+/* The legal-advice note: a bordered callout, not fine print. */
+.advice-note { margin-top: 32px; padding: 16px 20px; border: 1px solid var(--pen); border-left-width: 4px; border-radius: 4px; background: color-mix(in srgb, var(--pen) 7%, transparent); color: var(--ink); font-size: 16px; line-height: 1.55; }
+.advice-note strong { color: var(--pen); margin-right: 4px; }
