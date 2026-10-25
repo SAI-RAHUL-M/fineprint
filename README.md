@@ -32,6 +32,16 @@ uv run pytest                     # offline, no credits used
 uv run python scripts/smoke.py    # live: pings every model and the knowledge base
 ```
 
+## Demo safety net and accuracy
+
+```bash
+uv run python scripts/record_demo.py   # run the sample lease on live models once and save it
+uv run python scripts/evaluate.py      # score that run against samples/sketchy-lease.labels.json
+```
+
+Open the app with `?demo=1` to replay the recorded run (and its emails) without calling any model.
+The evaluation compares each reviewer alone with the combined verdict.
+
 ## Deploy to DigitalOcean App Platform
 
 The app ships as a Docker image (`Dockerfile`) and an App Platform spec (`.do/app.yaml`).
