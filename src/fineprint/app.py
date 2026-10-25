@@ -15,6 +15,8 @@ from pydantic import BaseModel, Field
 
 from . import prompts
 from .config import ROOT, get_settings
+from .demo import load as load_demo
+from .demo import replay as demo_replay
 from .llm import LLM, LLMError
 from .models import MODELS
 from .pipeline import Event, Pipeline
@@ -24,6 +26,7 @@ from .schemas import EmailDraft, EmailRequest
 log = logging.getLogger(__name__)
 HERE = Path(__file__).parent
 SAMPLE = ROOT / "samples" / "sketchy-lease.txt"
+DEMO_RUN = ROOT / "samples" / "demo-run.json"
 
 
 @asynccontextmanager
@@ -73,15 +76,22 @@ async def healthz(request: Request) -> dict[str, object]:
 
 
 @app.post("/api/analyze")
-async def analyze(body: AnalyzeRequest, request: Request) -> StreamingResponse:
+async def analyze(body: AnalyzeRequest, request: Request, demo: bool = False) -> StreamingResponse:
+    """Stream a live analysis, or with ?demo=1 replay the recorded run of the sample lease."""
     state = request.app.state
-    if state.llm is None:
-        raise HTTPException(503, "MODEL_ACCESS_KEY is not configured on the server.")
-    pipeline = Pipeline(state.llm, state.retriever, state.settings)
+    if demo:
+        recorded = load_demo(DEMO_RUN)
+        if recorded is None:
+            raise HTTPException(404, "No recorded demo yet. Run scripts/record_demo.py first.")
+        events = demo_replay(recorded["events"])
+    else:
+        if state.llm is None:
+            raise HTTPException(503, "MODEL_ACCESS_KEY is not configured on the server.")
+        events = Pipeline(state.llm, state.retriever, state.settings).run(body.text)
 
     async def stream() -> AsyncIterator[str]:
         try:
-            async for event in pipeline.run(body.text):
+            async for event in events:
                 yield sse(event)
         except Exception:
             log.exception("analysis failed")
@@ -95,7 +105,9 @@ async def analyze(body: AnalyzeRequest, request: Request) -> StreamingResponse:
 
 
 @app.post("/api/email")
-async def email(body: EmailRequest, request: Request) -> EmailDraft:
+async def email(body: EmailRequest, request: Request, demo: bool = False) -> EmailDraft:
+    if demo and (recorded := load_demo(DEMO_RUN)) and body.tone in recorded["emails"]:
+        return EmailDraft.model_validate(recorded["emails"][body.tone])
     llm = request.app.state.llm
     if llm is None:
         raise HTTPException(503, "MODEL_ACCESS_KEY is not configured on the server.")

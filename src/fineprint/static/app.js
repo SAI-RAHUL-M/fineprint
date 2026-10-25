@@ -15,6 +15,9 @@ const STAGE_TEXT = {
   verify: "Checking each note against the guide it cites…",
 };
 
+// ?demo=1 replays a recorded run of the sample lease (for flaky conference Wi-Fi).
+const DEMO = new URLSearchParams(location.search).has("demo") ? "?demo=1" : "";
+
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
@@ -99,7 +102,7 @@ async function analyze(text) {
   $("#analyze-btn").disabled = true;
 
   try {
-    const res = await fetch("/api/analyze", {
+    const res = await fetch(`/api/analyze${DEMO}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
@@ -539,7 +542,7 @@ async function draftEmail(flagged) {
   Object.assign(e, { loading: true, error: null });
   renderPanel();
   try {
-    const res = await fetch("/api/email", {
+    const res = await fetch(`/api/email${DEMO}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
