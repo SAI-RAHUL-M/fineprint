@@ -162,6 +162,8 @@ class Pipeline:
                 continue  # model invented or misnumbered a clause
             allowed = {p.id for p in by_id[v.clause_id].passages}
             v.cite_ids = [c for c in v.cite_ids if c in allowed]
+            if v.label == "ask_about_this" and not v.cite_ids:
+                v.label = "uncommon"  # "ask about this" must be backed by a guide passage
             if v.highlight and _squash(v.highlight) not in _squash(by_id[v.clause_id].clause.text):
                 v.highlight = None  # only mark words that are really in the lease
             clean.append(v)
@@ -179,7 +181,7 @@ class Pipeline:
 
         async def check(chunk: Sequence[tuple[ClauseResult, Juror, Verdict]]) -> VerifyBatch:
             items = [
-                (r.clause.id, j, v.explanation, [p for p in r.passages if p.id in v.cite_ids])
+                (r.clause.id, j, r.clause.text, v.explanation, [p for p in r.passages if p.id in v.cite_ids])
                 for r, j, v in chunk
             ]
             try:

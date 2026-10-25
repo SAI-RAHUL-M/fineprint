@@ -98,3 +98,17 @@ async def test_jury_agreement_verification_and_score():
     assert report["questions"][:2] == ["Q about Cleaning Fee?", "Q about Landlord Entry?"]
     assert report["clarity_score"] == 100 - 10 - 10 - 1
     assert {"juror_a", "juror_b", "fast"} <= set(llm.roles)
+
+
+async def test_ask_without_a_valid_citation_is_downgraded():
+    class OneVerdict:
+        async def call_json(self, role, messages, schema):
+            v = {"clause_id": 1, "label": "ask_about_this", "explanation": "e", "cite_ids": ["made-up-id"]}
+            return JuryBatch.model_validate({"verdicts": [v]}), CallMeta(role=role, model="m", ms=1)
+
+    from fineprint.schemas import Clause, ClauseResult
+
+    clause = Clause(id=1, number="1", heading="Pets", text="No pets.", start=0, end=8)
+    pipeline = Pipeline(OneVerdict(), LocalCorpus(ROOT / "kb"), Settings(_env_file=None))
+    _, [verdict] = await pipeline._judge("a", [ClauseResult(clause=clause)])
+    assert verdict.label == "uncommon" and verdict.cite_ids == []

@@ -1,0 +1,29 @@
+{
+  "models": {
+    "juror_b": "gemma-4-31B-it",
+    "juror_a": "openai-gpt-oss-120b"
+  },
+  "results": {
+    "reviewer_a": {
+      "n": 21,
+      "accuracy": 0.762,
+      "flag_precision": 1.0,
+      "flag_recall": 0.889,
+      "ask_recall": 0.571
+    },
+    "reviewer_b": {
+      "n": 21,
+      "accuracy": 0.905,
+      "flag_precision": 1.0,
+      "flag_recall": 0.889,
+      "ask_recall": 1.0
+    },
+    "combined": {
+      "n": 21,
+      "accuracy": 0.905,
+      "flag_precision": 1.0,
+      "flag_recall": 0.889,
+      "ask_recall": 1.0
+    }
+  }
+}

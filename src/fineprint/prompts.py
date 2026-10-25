@@ -26,8 +26,8 @@ JUROR_SYSTEM = (
     "- ask_about_this: the student should ask the landlord about it before signing.\n"
     "Explain what the clause means and why you chose the label in at most 3 sentences. Put the ids of the "
     "passages that support your explanation in cite_ids (only ids shown for that clause). If the passages do "
-    "not cover the clause, use your general sense of typical leases, leave cite_ids empty, and never choose "
-    "ask_about_this without a passage. For uncommon or ask_about_this, add one short, polite question_to_ask "
+    "not cover the clause, use your general sense of typical leases and leave cite_ids empty. ask_about_this "
+    "always needs at least one cited passage; without one, use uncommon at most. For uncommon or ask_about_this, add one short, polite question_to_ask "
     "the landlord, and set highlight to the 3-15 words of the clause that matter most, copied exactly as "
     "written; otherwise highlight is null.\n"
     'Schema: {"verdicts": [{"clause_id": int, "label": "standard"|"uncommon"|"ask_about_this", '
@@ -35,10 +35,12 @@ JUROR_SYSTEM = (
 )
 
 VERIFY_SYSTEM = (
-    "You check whether explanations are supported by their cited passages. For each item, answer "
-    "supported=true only if the cited passages actually discuss the same topic and back up the explanation's "
-    "statements about what is typical or worth asking. If the passages are about something else, or the "
-    "explanation claims more than they say, answer supported=false. Give a short reason.\n"
+    "You check a reviewer's note on one lease clause against the guide passages it cites. Statements that "
+    "describe what the clause itself says are fine: check them against the clause text. Only the note's claims "
+    "about what is typical, unusual or worth asking need support from the cited passages. Answer "
+    "supported=true when the passages cover the same topic and back up those claims, even if worded "
+    "differently. Answer supported=false if the passages are about a different topic, or the note claims "
+    "something about typical leases that the passages don't say. Give a short reason.\n"
     'Schema: {"checks": [{"clause_id": int, "juror": "a"|"b", "supported": bool, "reason": str}]}'
 )
 
@@ -111,8 +113,9 @@ def juror_user(items: list[tuple[Clause, str, list[Passage]]]) -> str:
     )
 
 
-def verify_user(items: list[tuple[int, str, str, list[Passage]]]) -> str:
+def verify_user(items: list[tuple[int, str, str, str, list[Passage]]]) -> str:
     return "\n\n---\n\n".join(
-        f"clause_id {cid}, juror {juror}\nExplanation: {explanation}\nCited passages:\n{passages_block(ps)}"
-        for cid, juror, explanation, ps in items
+        f"clause_id {cid}, juror {juror}\nClause: {clip(clause, 900)}\nNote: {explanation}\n"
+        f"Cited passages:\n{passages_block(ps)}"
+        for cid, juror, clause, explanation, ps in items
     )
