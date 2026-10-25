@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fineprint
 
-## Getting Started
+A jury of open-weight models explains your lease before you sign it.
 
-First, run the development server:
+Paste a lease and Fineprint splits it into clauses, finds plain-language tenant guidance for each one,
+and has two open-weight models from different families judge every clause independently as
+**Standard**, **Uncommon** or **Ask about this**. A verifier drops any explanation its cited sources
+don't support. You get a clarity score and a list of questions to ask your landlord.
+
+> Educational tool, not legal advice. Fineprint never says whether a clause is legal.
+
+## Built with DigitalOcean
+
+| Piece | Service |
+|---|---|
+| Jurors, classifier, verifier | Serverless Inference: `openai-gpt-oss-120b`, `qwen3.5-397b-a17b`, `openai-gpt-oss-20b` (with open-weight fallbacks) |
+| Tenant guidance retrieval | Knowledge Bases (MCP retrieval), with a bundled local fallback |
+| Hosting | App Platform |
+
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+uv sync
+cp .env.example .env   # add MODEL_ACCESS_KEY (and KB_ID / DO_API_TOKEN when ready)
+uv run fineprint       # http://localhost:8000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Checks:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+uv run pytest                     # offline, no credits used
+uv run python scripts/smoke.py    # live: pings every model and the knowledge base
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## License
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
