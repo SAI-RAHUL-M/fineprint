@@ -27,38 +27,38 @@
 /* Dark: a lamp-lit desk rather than a black screen. Applied when chosen in the header,
    or when the system prefers dark and the reader hasn't picked light. Keep both blocks in sync. */
 :root[data-theme="dark"] {
-  --desk: #22201c;
-  --paper: #2c2a25;
-  --paper-edge: #3d3932;
-  --ink: #f6f2e9;
+  --desk: #302d28;
+  --paper: #3b3832;
+  --paper-edge: #4d4840;
+  --ink: #f7f3ea;
   --ink-2: #ddd6c8;
-  --ink-3: #b1a898;
-  --rule: #48433a;
-  --pen: #ff9f90;
+  --ink-3: #c2b8a7;
+  --rule: #5a544a;
+  --pen: #ffaa9c;
   --pen-wash: #4a2a24;
-  --marker: #7d6517;
+  --marker: #76621a;
   --marker-ink: #ffd970;
   --ok: #a3d6b2;
   --button: #f6f2e9;
-  --button-ink: #22201c;
+  --button-ink: #302d28;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --desk: #22201c;
-    --paper: #2c2a25;
-    --paper-edge: #3d3932;
-    --ink: #f6f2e9;
+    --desk: #302d28;
+    --paper: #3b3832;
+    --paper-edge: #4d4840;
+    --ink: #f7f3ea;
     --ink-2: #ddd6c8;
-    --ink-3: #b1a898;
-    --rule: #48433a;
-    --pen: #ff9f90;
+    --ink-3: #c2b8a7;
+    --rule: #5a544a;
+    --pen: #ffaa9c;
     --pen-wash: #4a2a24;
-    --marker: #7d6517;
+    --marker: #76621a;
     --marker-ink: #ffd970;
     --ok: #a3d6b2;
     --button: #f6f2e9;
-    --button-ink: #22201c;
+    --button-ink: #302d28;
     color-scheme: dark;
   }
 }
