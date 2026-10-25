@@ -781,7 +781,11 @@ function renderModelCard(report) {
     h("td", {}, `${g.inp.toLocaleString()} / ${g.out.toLocaleString()}`),
     h("td", {}, [g.fb && `${g.fb} fallback`, g.rep && `${g.rep} repaired`].filter(Boolean).join(", ") || "–"),
   )));
-  $("#retrieval-src").textContent = report.retrieval_source === "local" ? "our bundled guide" : report.retrieval_source;
+  $("#retrieval-src").textContent = {
+    "local": "our bundled guide",
+    "digitalocean-kb": "DigitalOcean Knowledge Base",
+    "local (fallback)": "our bundled guide (the Knowledge Base didn't answer)",
+  }[report.retrieval_source] ?? report.retrieval_source;
   $("#model-card").hidden = false;
 }
 

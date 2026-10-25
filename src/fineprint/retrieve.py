@@ -3,6 +3,7 @@
 The local corpus keeps the demo working before the KB finishes indexing, or if the KB is unreachable.
 """
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -100,9 +101,14 @@ class LocalCorpus:
 
 
 class DOKnowledgeBase:
-    """Calls the `retrieve_knowledge_base` tool on DigitalOcean's stateless Knowledge Base MCP endpoint."""
+    """Calls the `retrieve_knowledge_base` tool on DigitalOcean's Knowledge Base MCP endpoint.
+
+    The endpoint is stateless, but the docs ask clients to `initialize` first, so we do that once and
+    carry a session id if the server hands one back.
+    """
 
     name = "digitalocean-kb"
+    PROTOCOL = "2025-03-26"
 
     def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None):
         self._kb_id = settings.kb_id
@@ -113,28 +119,57 @@ class DOKnowledgeBase:
                 "Authorization": f"Bearer {settings.do_api_token}",
                 "Accept": "application/json, text/event-stream",
                 "Content-Type": "application/json",
+                "Mcp-Protocol-Version": self.PROTOCOL,
             },
         )
+        self._session: str | None = None
+        self._ready = False
+        self._lock = asyncio.Lock()
+        self._next_id = 0
+
+    async def _post(self, method: str, params: dict[str, Any] | None = None, *, notify: bool = False):
+        payload: dict[str, Any] = {"jsonrpc": "2.0", "method": method}
+        if params is not None:
+            payload["params"] = params
+        if not notify:
+            self._next_id += 1
+            payload["id"] = self._next_id
+        headers = {"Mcp-Session-Id": self._session} if self._session else {}
+        res = await self._client.post(self._url, json=payload, headers=headers)
+        res.raise_for_status()
+        self._session = res.headers.get("mcp-session-id", self._session)
+        return None if notify or not res.text.strip() else _parse_rpc(res.text)
+
+    async def _ensure_ready(self) -> None:
+        async with self._lock:
+            if self._ready:
+                return
+            init = await self._post(
+                "initialize",
+                {
+                    "protocolVersion": self.PROTOCOL,
+                    "capabilities": {},
+                    "clientInfo": {"name": "fineprint", "version": "0.1"},
+                },
+            )
+            if init and "error" in init:
+                raise RuntimeError(f"KB MCP initialize failed: {init['error']}")
+            await self._post("notifications/initialized", notify=True)
+            self._ready = True
 
     async def call_raw(self, query: str, k: int) -> dict[str, Any]:
-        payload = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {
-                "name": "retrieve_knowledge_base",
-                "arguments": {"knowledge_base_id": self._kb_id, "query": query, "num_results": k},
-            },
-        }
-        res = await self._client.post(self._url, json=payload)
-        res.raise_for_status()
-        return _parse_rpc(res.text)
+        await self._ensure_ready()
+        args = {"knowledge_base_id": self._kb_id, "query": query, "num_results": k}
+        return await self._post("tools/call", {"name": "retrieve_knowledge_base", "arguments": args}) or {}
 
     async def retrieve(self, query: str, k: int) -> list[Passage]:
         rpc = await self.call_raw(query, k)
         if "error" in rpc:
             raise RuntimeError(f"KB MCP error: {rpc['error']}")
-        return _passages_from_tool_result(rpc.get("result", {}))[:k]
+        result = rpc.get("result", {})
+        if result.get("isError"):
+            raise RuntimeError(f"KB tool error: {str(result.get('content'))[:200]}")
+        return _passages_from_tool_result(result)[:k]
 
 
 def _parse_rpc(body: str) -> dict[str, Any]:
@@ -193,6 +228,7 @@ class FallbackRetriever:
     async def retrieve(self, query: str, k: int) -> list[Passage]:
         try:
             if found := await self.primary.retrieve(query, k):
+                self.name = self.primary.name
                 return found
         except Exception as e:
             log.warning("%s retrieval failed, using %s: %s", self.primary.name, self.fallback.name, e)
