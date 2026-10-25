@@ -7,6 +7,12 @@ and has two open-weight models from different families judge every clause indepe
 **Standard**, **Uncommon** or **Ask about this**. A verifier drops any explanation its cited sources
 don't support. You get a clarity score and a list of questions to ask your landlord.
 
+Then you can:
+- **Draft the email**: turn the questions into a short, editable email (friendly or firm).
+- **Practice asking**: role-play the conversation with a landlord played by `gpt-oss-120b`, while a coach
+  (`gpt-oss-20b`) rates each message for clarity and politeness, suggests better wording, and ticks off
+  the questions you've covered.
+
 > Educational tool, not legal advice. Fineprint never says whether a clause is legal.
 
 ## Built with DigitalOcean

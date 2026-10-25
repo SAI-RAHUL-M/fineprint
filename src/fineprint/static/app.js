@@ -436,6 +436,9 @@ function questionList() {
       onclick: (e) => { $(".questions").classList.add("is-expanded"); e.currentTarget.remove(); },
     }, `Show all ${flagged.length} questions`),
     h("button", { type: "button", class: "btn quiet", onclick: () => copy(text, "Copied.") }, "Copy these questions"),
+    state.report && h("div", { class: "practice-start" },
+      h("button", { type: "button", class: "btn link", onclick: () => openPractice(flagged) }, "Nervous about asking? Practice first"),
+    ),
     state.report && emailBlock(flagged),
   ];
 }
@@ -561,6 +564,123 @@ async function draftEmail(flagged) {
   } finally {
     if (seq === e.seq) { e.loading = false; renderPanel(); }
   }
+}
+
+/* ---------- Practice the conversation ---------- */
+
+const OPENING = "Hi! Thanks for coming by. Did you get a chance to read through the lease? Happy to answer any questions before you sign.";
+const practice = { questions: [], history: [], covered: new Set(), notes: [], busy: false };
+const dialog = $("#practice");
+
+function openPractice(flagged) {
+  Object.assign(practice, {
+    questions: flagged.slice(0, 6).map((i) => i.question),
+    history: [{ role: "landlord", text: OPENING }],
+    covered: new Set(),
+    notes: [],
+    busy: false,
+  });
+  $("#chat-input").value = "";
+  $("#chat-error").hidden = true;
+  renderPractice();
+  dialog.showModal();
+  $("#chat-input").focus();
+}
+
+$("#practice-close").addEventListener("click", () => dialog.close());
+dialog.addEventListener("click", (e) => { if (e.target === dialog) dialog.close(); }); // click on backdrop
+
+$("#chat-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#chat-form").requestSubmit(); }
+});
+
+$("#chat-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const input = $("#chat-input");
+  const message = input.value.trim();
+  if (!message || practice.busy) return;
+
+  const history = practice.history.slice();
+  practice.history.push({ role: "student", text: message });
+  practice.busy = true;
+  input.value = "";
+  $("#chat-error").hidden = true;
+  renderPractice();
+
+  try {
+    const res = await fetch("/api/practice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lease: leaseText(), questions: practice.questions, history, message }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "The landlord didn't answer. Try again.");
+    practice.history.push({ role: "landlord", text: data.landlord });
+    if (data.coach) {
+      practice.notes.push(data.coach);
+      data.coach.covered.forEach((i) => practice.covered.add(i));
+    }
+  } catch (err) {
+    practice.history.pop(); // put the message back so nothing is lost
+    input.value = message;
+    $("#chat-error").textContent = err.message;
+    $("#chat-error").hidden = false;
+  } finally {
+    practice.busy = false;
+    renderPractice();
+    input.focus();
+  }
+});
+
+$("#practice-finish").addEventListener("click", () => renderSummary());
+
+function leaseText() {
+  return state.order.map((id) => state.items.get(id).clause.text).join("\n\n").slice(0, 30000);
+}
+
+function renderPractice() {
+  const log = $("#chat-log");
+  log.replaceChildren(...[
+    ...practice.history.map((m) => h("li", { class: `msg ${m.role}` },
+      h("span", { class: "msg-who" }, m.role === "landlord" ? "Landlord" : "You"),
+      h("p", {}, m.text),
+    )),
+    practice.busy && h("li", { class: "msg landlord typing" }, h("span", { class: "msg-who" }, "Landlord"), h("p", {}, "typing…")),
+  ].filter(Boolean));
+  log.scrollTop = log.scrollHeight;
+  $("#chat-send").disabled = practice.busy;
+  $("#chat-input").placeholder = practice.history.length > 1 ? "Ask a follow-up, or your next question…" : "Ask your first question…";
+
+  $("#practice-checklist").replaceChildren(...practice.questions.map((q, i) =>
+    h("li", { class: practice.covered.has(i) ? "done" : "" },
+      h("span", { class: "sr-only" }, practice.covered.has(i) ? "Asked: " : "Not asked yet: "), q),
+  ));
+
+  const note = practice.notes.at(-1);
+  $("#coach-note").replaceChildren(...(note ? [
+    h("h3", {}, "Coach's note"),
+    h("p", { class: "scores" }, `Clear ${note.clarity}/5 · Polite ${note.politeness}/5`),
+    h("p", {}, note.tip),
+    note.better && h("div", { class: "better" },
+      h("p", {}, "Try: ", h("em", {}, `“${note.better}”`)),
+      h("button", { type: "button", class: "btn quiet", onclick: () => { $("#chat-input").value = note.better; $("#chat-input").focus(); } }, "Use this wording"),
+    ),
+  ] : [h("p", { class: "empty" }, "Send a message and the coach will leave a note here.")]).filter((p) => p instanceof Node));
+}
+
+function renderSummary() {
+  const asked = practice.covered.size;
+  const total = practice.questions.length;
+  const left = practice.questions.filter((_, i) => !practice.covered.has(i));
+  const avg = (k) => practice.notes.length ? (practice.notes.reduce((s, n) => s + n[k], 0) / practice.notes.length).toFixed(1) : null;
+  $("#coach-note").replaceChildren(...[
+    h("h3", {}, "How it went"),
+    h("p", { class: "summary-line" }, `You asked about ${asked} of ${total} question${total === 1 ? "" : "s"}.`),
+    avg("clarity") && h("p", { class: "scores" }, `Average: clear ${avg("clarity")}/5 · polite ${avg("politeness")}/5`),
+    left.length
+      ? [h("p", {}, "Still worth asking:"), h("ul", { class: "left" }, left.map((q) => h("li", {}, q)))]
+      : h("p", {}, "You covered everything. You're ready for the real conversation."),
+  ].flat().filter((p) => p instanceof Node));
 }
 
 /* ---------- Under the hood ---------- */

@@ -54,6 +54,7 @@ a { color: inherit; }
 .skip { position: absolute; left: -999px; top: 8px; background: var(--paper); padding: 8px 12px; z-index: 30; }
 .skip:focus { left: 8px; }
 [hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Masthead */
 .masthead { border-bottom: 1px solid var(--rule); }
@@ -216,6 +217,54 @@ mark, .hl { background: linear-gradient(104deg, transparent .4em, var(--marker) 
 .email .hint { margin-top: 8px; }
 .email-actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
 .email-actions a.btn { text-decoration: underline; }
+
+/* Practice */
+.practice-start { margin-top: 18px; }
+.practice-start .btn.link { padding: 0; }
+.practice { width: min(1000px, calc(100vw - 32px)); height: min(760px, calc(100vh - 32px)); padding: 0; border: 1px solid var(--paper-edge); background: var(--paper); color: var(--ink); box-shadow: 0 30px 80px -30px rgb(20 15 5 / 50%); }
+.practice[open] { display: flex; flex-direction: column; }
+.practice::backdrop { background: rgb(29 27 23 / 45%); }
+.practice-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 22px 26px 16px; border-bottom: 1px solid var(--rule); }
+.practice-head h2 { font-family: var(--serif); font-weight: 500; font-size: 26px; margin: 0 0 4px; }
+.practice-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; }
+.chat { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--rule); }
+.chat-log { list-style: none; margin: 0; padding: 22px 26px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.msg { max-width: 78%; }
+.msg-who { display: block; font-size: 12px; color: var(--ink-3); margin-bottom: 3px; }
+.msg p { margin: 0; padding: 10px 14px; line-height: 1.5; }
+.msg.landlord p { font-family: var(--serif); font-size: 17px; background: var(--desk); border-radius: 2px 12px 12px 12px; }
+.msg.student { align-self: flex-end; text-align: right; }
+.msg.student p { background: var(--ink); color: var(--paper); border-radius: 12px 2px 12px 12px; text-align: left; }
+.msg.typing p { color: var(--ink-3); font-style: italic; }
+.chat-form { display: flex; gap: 10px; padding: 14px 26px 18px; border-top: 1px solid var(--rule); align-items: flex-end; }
+.chat-form textarea { flex: 1; min-height: 48px; max-height: 160px; padding: 10px 12px; font-size: 16px; resize: none; box-shadow: none; }
+.chat > .form-error { padding: 0 26px 12px; margin: 0; }
+.coach { padding: 20px 22px; overflow-y: auto; }
+.coach h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); margin: 0 0 10px; font-weight: 600; }
+.checklist { list-style: none; margin: 0 0 22px; padding: 0; }
+.checklist li { position: relative; padding: 8px 0 8px 26px; border-bottom: 1px solid var(--rule); font-family: var(--serif); font-size: 15px; line-height: 1.4; color: var(--ink-2); }
+.checklist li::before { content: ""; position: absolute; left: 0; top: 11px; width: 14px; height: 14px; border: 1.5px solid var(--ink-3); border-radius: 3px; }
+.checklist li.done { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--pen); }
+.checklist li.done::before { border-color: var(--ok); background: var(--ok); }
+.checklist li.done::after { content: "✓"; position: absolute; left: 2px; top: 6px; font-size: 12px; color: var(--paper); font-weight: 700; }
+.coach-note { border-top: 1px solid var(--ink); padding-top: 14px; margin-bottom: 16px; font-size: 15px; }
+.coach-note p { margin: 0 0 10px; }
+.coach-note .scores { font-size: 13px; color: var(--ink-3); }
+.coach-note .better { border-left: 3px solid var(--marker); padding-left: 12px; }
+.coach-note .better em { font-family: var(--serif); font-size: 16px; }
+.coach-note .summary-line { font-family: var(--serif); font-size: 20px; }
+.coach-note ul.left { margin: 0 0 10px; padding-left: 18px; font-family: var(--serif); }
+
+@media (max-width: 760px) {
+  .practice { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; border: 0; }
+  .practice-head { padding: 16px; }
+  .practice-head h2 { font-size: 22px; }
+  .practice-body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+  .chat { border-right: 0; }
+  .chat-log, .chat-form { padding-left: 16px; padding-right: 16px; }
+  .coach { border-top: 1px solid var(--rule); max-height: 34vh; padding: 14px 16px; }
+  .msg { max-width: 88%; }
+}
 
 /* Under the hood */
 .under-hood { margin-top: 40px; border-top: 1px solid var(--rule); padding-top: 16px; font-size: 14px; color: var(--ink-2); }

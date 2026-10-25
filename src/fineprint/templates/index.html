@@ -143,6 +143,33 @@
     <p>It explains leases. It isn't a lawyer and doesn't give legal advice.</p>
   </footer>
 
+  <dialog id="practice" class="practice" aria-labelledby="practice-title">
+    <div class="practice-head">
+      <div>
+        <h2 id="practice-title">Practice asking your landlord</h2>
+        <p class="hint">You're the tenant. The landlord has read your lease. Ask in your own words; a coach leaves a short note after each message.</p>
+      </div>
+      <button type="button" class="btn quiet" id="practice-close">Close</button>
+    </div>
+    <div class="practice-body">
+      <div class="chat">
+        <ol class="chat-log" id="chat-log" aria-live="polite" aria-label="Conversation"></ol>
+        <form id="chat-form" class="chat-form">
+          <label for="chat-input" class="sr-only">Your message</label>
+          <textarea id="chat-input" rows="2" placeholder="Ask your first question…"></textarea>
+          <button class="btn primary" type="submit" id="chat-send">Send</button>
+        </form>
+        <p id="chat-error" class="form-error" role="alert" hidden></p>
+      </div>
+      <aside class="coach" aria-label="Coach">
+        <h3>Your questions</h3>
+        <ol id="practice-checklist" class="checklist"></ol>
+        <div id="coach-note" class="coach-note" aria-live="polite"></div>
+        <button type="button" class="btn quiet" id="practice-finish">I'm done, how did I do?</button>
+      </aside>
+    </div>
+  </dialog>
+
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>
