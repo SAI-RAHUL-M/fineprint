@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Fineprint · Know what you're signing</title>
   <meta name="description" content="Paste your lease and get it back marked up: what each clause means in plain English, and which ones to ask your landlord about before you sign.">
+  <meta name="theme-color" content="#f1ede4">
+  <meta property="og:title" content="Fineprint · Know what you're signing">
+  <meta property="og:description" content="Paste your lease and get it back marked up: what each clause means, and what to ask your landlord before you sign.">
+  <meta property="og:type" content="website">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23fbf8f1'/><path d='M8 11h16M8 16h16M8 21h9' stroke='%231d1b17' stroke-width='2' stroke-linecap='round'/><path d='M19 22.5c2-1 4-1.2 6-.6' stroke='%23b3261e' stroke-width='2' fill='none' stroke-linecap='round'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -41,7 +45,7 @@
             placeholder="Paste the full text here. Copy it straight from the PDF your landlord sent you."
             aria-describedby="lease-help"></textarea>
           <div class="paste-foot">
-            <p id="lease-help" class="hint"><span id="char-count">0</span> characters. We don't keep a copy.</p>
+            <p id="lease-help" class="hint"><span id="char-count">0</span> characters. You can also drop a .txt file here. We don't keep a copy.</p>
             <div class="actions">
               <button type="button" id="sample-btn" class="btn link">No lease handy? Try ours</button>
               <button type="submit" id="analyze-btn" class="btn primary">Mark it up</button>
@@ -115,6 +119,7 @@
           <button class="filter uncommon" data-filter="uncommon" aria-pressed="false">Unusual <b id="n-uncommon">0</b></button>
         </div>
         <p class="checked" id="removed-badge" hidden></p>
+        <button type="button" id="print-btn" class="btn quiet" hidden>Print or save as PDF</button>
         <button type="button" id="new-btn" class="btn quiet">Start over</button>
       </div>
 
@@ -123,6 +128,7 @@
         <aside class="notes" id="panel" aria-live="polite" aria-label="Notes">
           <div id="panel-body"></div>
         </aside>
+        <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
       </div>
 
       <details class="under-hood" id="model-card" hidden>

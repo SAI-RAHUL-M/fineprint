@@ -297,12 +297,15 @@ th { font-weight: 600; color: var(--ink-3); font-size: 12px; text-transform: upp
   .notes.is-summary { position: static; transform: none; max-height: none; box-shadow: none; border: 0; background: none; padding: 0; }
   .layout { display: flex; flex-direction: column-reverse; }
   .panel-close { display: inline-block; float: right; margin: -4px 0 0 12px; }
+  .notes.is-open { border-radius: 14px 14px 0 0; }
+  .notes.is-open::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--rule); margin: -8px auto 14px; }
+  .sheet-backdrop { position: fixed; inset: 0; background: rgb(29 27 23 / 35%); z-index: 19; }
   /* Questions sit above the lease on small screens, so keep the list short until asked. */
   .questions:not(.is-expanded) li:nth-child(n+4) { display: none; }
   .show-all { display: block; margin-bottom: 6px; }
 }
 @media (min-width: 981px) {
-  .show-all { display: none; }
+  .show-all, .sheet-backdrop { display: none !important; }
 }
 @media (max-width: 680px) {
   .masthead-inner { padding: 14px 16px; }
@@ -322,3 +325,24 @@ th { font-weight: 600; color: var(--ink-3); font-size: 12px; text-transform: upp
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Print: a clean, marked-up copy to bring to the landlord. */
+@media print {
+  :root { --desk: #fff; --paper: #fff; }
+  body { background: #fff; font-size: 11pt; }
+  .masthead-nav, .toolbar, .progress, .under-hood, .btn, .email, .email-start, .practice-start,
+  .sheet-backdrop, .skip, .toast, .panel-close, dialog { display: none !important; }
+  .results { padding: 0; max-width: none; }
+  .layout { display: block; margin-top: 16px; }
+  .page { box-shadow: none; border: 0; padding: 0; }
+  .clause { margin: 0; padding: 8px 0 8px 12px; break-inside: avoid; }
+  .clause .clause-text { display: block !important; -webkit-line-clamp: unset !important; overflow: visible !important; }
+  .notes { position: static; max-height: none; overflow: visible; margin-top: 24px; break-before: page; }
+  .questions:not(.is-expanded) li { display: grid !important; }
+  .questions button { white-space: normal; }
+  mark.hl { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .clause.l-ask_about_this, .clause.l-uncommon { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .colophon { border: 0; padding-top: 24px; }
+}
+
+textarea.is-dragging { border: 2px dashed var(--ink-3); background: var(--desk); }

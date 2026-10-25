@@ -60,6 +60,21 @@ textarea.addEventListener("input", () => {
   formError.hidden = true;
 });
 
+// Drop a text file onto the paste box. PDFs need copy-paste for now.
+textarea.addEventListener("dragover", (e) => { e.preventDefault(); textarea.classList.add("is-dragging"); });
+textarea.addEventListener("dragleave", () => textarea.classList.remove("is-dragging"));
+textarea.addEventListener("drop", async (e) => {
+  e.preventDefault();
+  textarea.classList.remove("is-dragging");
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  if (!/\.(txt|md|text)$/i.test(file.name) && !file.type.startsWith("text/")) {
+    return showFormError("We can only read text files for now. Open the PDF, select all, copy, and paste it here.");
+  }
+  textarea.value = await file.text();
+  textarea.dispatchEvent(new Event("input"));
+});
+
 $("#sample-btn").addEventListener("click", async () => {
   const res = await fetch("/api/sample");
   textarea.value = await res.text();
@@ -220,6 +235,7 @@ function applyReport(report) {
   updateCounts();
   writeVerdict(report);
   $("#progress").hidden = true;
+  $("#print-btn").hidden = false;
   renderModelCard(report);
   renderPanel();
 }
@@ -289,6 +305,7 @@ function resetResults() {
   $("#score").hidden = true;
   $("#progress").hidden = false;
   $("#removed-badge").hidden = true;
+  $("#print-btn").hidden = true;
   $("#model-card").hidden = true;
   updateProgress();
   setFilter("all");
@@ -367,6 +384,10 @@ function updateCounts() {
 }
 
 $$(".filters .filter").forEach((b) => b.addEventListener("click", () => setFilter(b.dataset.filter)));
+$("#sheet-backdrop").addEventListener("click", () => select(null));
+$("#print-btn").addEventListener("click", () => window.print());
+// The printout shows the question list, so print with nothing selected.
+window.addEventListener("beforeprint", () => { if (state.selected != null) select(null); });
 
 function setFilter(f) {
   state.filter = f;
@@ -420,6 +441,7 @@ function renderPanel() {
   const it = state.items.get(state.selected);
   panel.classList.toggle("is-open", !!it);
   panel.classList.toggle("is-summary", !it);
+  $("#sheet-backdrop").hidden = !it; // only visible on small screens, where notes open as a bottom sheet
   const parts = (it ? clauseNotes(it) : questionList()).flat(Infinity).filter((p) => p instanceof Node);
   $("#panel-body").replaceChildren(...parts);
 }
