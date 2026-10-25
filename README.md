@@ -1,11 +1,38 @@
 # Fineprint
 
-A jury of open-weight models explains your lease before you sign it.
+**Know what you're signing.** Paste your lease and get it back marked up, the way a friend with a red pen
+would: what each clause means in plain English, and which ones to ask your landlord about before you sign.
 
-Paste a lease and Fineprint splits it into clauses, finds plain-language tenant guidance for each one,
-and has two open-weight models from different families judge every clause independently as
-**Standard**, **Uncommon** or **Ask about this**. A verifier drops any explanation its cited sources
-don't support. You get a clarity score and a list of questions to ask your landlord.
+**Live:** https://starfish-app-cv6n5.ondigitalocean.app
+
+Fineprint splits the lease into clauses, looks up each one in a plain-language lease guide stored in a
+DigitalOcean Knowledge Base, and has two open-weight models from different families (gpt-oss and Gemma)
+label every clause independently as **Normal**, **Unusual** or **Ask about this**, quoting the exact words
+and citing the guide. A third model checks every note against its source and softens anything unsupported.
+
+## How a request flows
+
+```
+Browser ──POST /api/analyze──▶ App Platform (FastAPI in Docker)
+                                 │  streams progress back as Server-Sent Events
+                                 ├─ split.py      cut into clauses (no AI)
+                                 ├─ classify      gpt-oss-20b ─────────┐
+                                 ├─ retrieve.py   Knowledge Base (MCP) │  DigitalOcean
+                                 ├─ jury          gpt-oss-120b ∥ Gemma ├─ Serverless
+                                 ├─ verify        gpt-oss-20b ─────────┘  Inference
+                                 └─ report        labels, score, questions
+```
+
+| File | What it does |
+|---|---|
+| `src/fineprint/app.py` | Web routes: page, `/api/analyze` (streaming), `/api/email`, `/api/practice`, `/healthz`; result cache |
+| `src/fineprint/pipeline.py` | The steps above; agreement between reviewers, citation and quote checks |
+| `src/fineprint/llm.py` | Calls DigitalOcean's OpenAI-compatible API; backup model per role; validates JSON, one repair retry |
+| `src/fineprint/retrieve.py` | Knowledge Base over MCP (handshake, session, section ranking); bundled guide as fallback |
+| `src/fineprint/prompts.py` | Every prompt in one place |
+| `src/fineprint/models.py` | Which open-weight model plays which role |
+| `src/fineprint/static/`, `templates/` | The interface: plain HTML, CSS and JavaScript, no build step |
+| `kb/lease-questions.md` | The guide (also uploaded to the Knowledge Base) |
 
 Then you can:
 - **Draft the email**: turn the questions into a short, editable email (friendly or firm).
