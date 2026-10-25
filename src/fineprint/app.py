@@ -20,8 +20,9 @@ from .demo import replay as demo_replay
 from .llm import LLM, LLMError
 from .models import MODELS
 from .pipeline import Event, Pipeline
+from .practice import practice_turn
 from .retrieve import make_retriever
-from .schemas import EmailDraft, EmailRequest
+from .schemas import EmailDraft, EmailRequest, PracticeReply, PracticeRequest
 
 log = logging.getLogger(__name__)
 HERE = Path(__file__).parent
@@ -122,6 +123,18 @@ async def email(body: EmailRequest, request: Request, demo: bool = False) -> Ema
         log.exception("email draft failed")
         raise HTTPException(502, "Couldn't write the email just now. Please try again.") from e
     return draft
+
+
+@app.post("/api/practice")
+async def practice(body: PracticeRequest, request: Request) -> PracticeReply:
+    llm = request.app.state.llm
+    if llm is None:
+        raise HTTPException(503, "Practice needs the model key configured on the server.")
+    try:
+        return await practice_turn(llm, body)
+    except Exception as e:
+        log.exception("practice turn failed")
+        raise HTTPException(502, "The landlord didn't answer. Try sending that again.") from e
 
 
 async def with_heartbeat(chunks: AsyncIterator[str], every: float) -> AsyncIterator[str]:

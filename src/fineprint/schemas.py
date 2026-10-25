@@ -130,6 +130,31 @@ class EmailDraft(BaseModel):
     body: str = Field(max_length=4000)
 
 
+class PracticeMessage(BaseModel):
+    role: Literal["student", "landlord"]
+    text: str = Field(min_length=1, max_length=1500)
+
+
+class PracticeRequest(BaseModel):
+    lease: str = Field(min_length=1, max_length=30_000)
+    questions: list[str] = Field(min_length=1, max_length=8)
+    history: list[PracticeMessage] = Field(default_factory=list, max_length=40)
+    message: str = Field(min_length=1, max_length=1000)
+
+
+class CoachNote(BaseModel):
+    clarity: int = Field(ge=1, le=5)
+    politeness: int = Field(ge=1, le=5)
+    tip: str = Field(max_length=400)
+    better: str | None = Field(default=None, max_length=500)
+    covered: list[int] = Field(default_factory=list)
+
+
+class PracticeReply(BaseModel):
+    landlord: str
+    coach: CoachNote | None  # None if the coach call failed; the conversation still continues
+
+
 class Report(BaseModel):
     clauses: list[ClauseResult]
     clarity_score: int
