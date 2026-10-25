@@ -39,6 +39,27 @@ VERIFY_SYSTEM = (
 )
 
 
+EMAIL_TONES = {
+    "friendly": "warm and easy-going, like a student who is excited about the apartment",
+    "firm": "polite but direct, like a student who wants clear answers in writing before signing",
+}
+
+EMAIL_SYSTEM = (
+    "You write a short email from a university student to their prospective landlord, asking questions "
+    "about the lease before signing. Write like a real person: short sentences, no filler, no corporate "
+    "phrases, and never open with 'I hope this email finds you well'. Do not mention AI, tools or apps. "
+    "Do not make legal claims or threats; just ask. Number the questions and mention the section each is "
+    "about. Thank them and sign off with the placeholder [Your name]. Use [Landlord name] in the greeting. "
+    "Keep the body under 200 words.\n"
+    'Schema: {"subject": str, "body": str}'
+)
+
+
+def email_user(questions: list[tuple[str, str]], tone: str) -> str:
+    listed = "\n".join(f"- ({heading}) {q}" for heading, q in questions)
+    return f"Tone: {EMAIL_TONES[tone]}.\nQuestions to include, in this order:\n{listed}"
+
+
 def clip(text: str, n: int) -> str:
     return text if len(text) <= n else text[: n - 1] + "…"
 

@@ -198,6 +198,25 @@ mark, .hl { background: linear-gradient(104deg, transparent .4em, var(--marker) 
 .questions small { display: block; font-family: var(--sans); font-size: 13px; color: var(--ink-3); margin-top: 3px; }
 .empty { font-family: var(--serif); font-style: italic; color: var(--ink-3); }
 
+/* Email */
+.email-start { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--rule); }
+.email-start .hint { margin-top: 10px; }
+.email { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--rule); }
+.email-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.email-head h2 { margin: 0; }
+.tone { display: inline-flex; border: 1px solid var(--paper-edge); border-radius: 4px; overflow: hidden; }
+.tone-opt { border: 0; background: var(--paper); padding: 4px 12px; font-size: 13px; cursor: pointer; color: var(--ink-3); }
+.tone-opt + .tone-opt { border-left: 1px solid var(--paper-edge); }
+.tone-opt[aria-checked="true"] { background: var(--ink); color: var(--paper); }
+.tone-opt:disabled { cursor: progress; }
+.field-label { display: block; font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); margin: 14px 0 6px; }
+.email-subject, .email-body { width: 100%; border: 1px solid var(--paper-edge); background: var(--paper); border-radius: 2px; padding: 10px 12px; font-family: var(--serif); font-size: 16px; line-height: 1.55; color: var(--ink); }
+.email-body { min-height: 260px; resize: vertical; box-shadow: none; }
+.email-subject:focus, .email-body:focus { outline: none; border-color: var(--ink-3); }
+.email .hint { margin-top: 8px; }
+.email-actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+.email-actions a.btn { text-decoration: underline; }
+
 /* Under the hood */
 .under-hood { margin-top: 40px; border-top: 1px solid var(--rule); padding-top: 16px; font-size: 14px; color: var(--ink-2); }
 .under-hood summary { cursor: pointer; font-weight: 600; color: var(--ink); }

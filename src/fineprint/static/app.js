@@ -42,6 +42,7 @@ const state = {
   filter: "all",
   controller: null,
   progress: { done: new Set(), current: null, reviews: 0, reviewTotal: 0 },
+  email: newEmail(),
   models: { juror_a: document.body.dataset.jurorA, juror_b: document.body.dataset.jurorB },
 };
 
@@ -274,6 +275,7 @@ function resetResults() {
   Object.assign(state, {
     items: new Map(), order: [], report: null, selected: null, filter: "all",
     progress: { done: new Set(), current: null, reviews: 0, reviewTotal: 0 },
+    email: newEmail(),
   });
   $("#document").replaceChildren(h("p", { class: "page-loading" }, "Reading your lease…"));
   $("#kicker").textContent = "Reading your lease";
@@ -430,7 +432,8 @@ function questionList() {
       type: "button", class: "btn quiet show-all",
       onclick: (e) => { $(".questions").classList.add("is-expanded"); e.currentTarget.remove(); },
     }, `Show all ${flagged.length} questions`),
-    h("button", { type: "button", class: "btn quiet", onclick: () => copy(text, "Copied. Paste it into an email to your landlord.") }, "Copy these questions"),
+    h("button", { type: "button", class: "btn quiet", onclick: () => copy(text, "Copied.") }, "Copy these questions"),
+    state.report && emailBlock(flagged),
   ];
 }
 
@@ -489,6 +492,73 @@ function sourceLink(p) {
 }
 
 const clip = (s, n) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+/* ---------- Email to the landlord ---------- */
+
+function newEmail() {
+  return { open: false, tone: "friendly", draft: null, loading: false, error: null, seq: 0 };
+}
+
+function emailBlock(flagged) {
+  const e = state.email;
+  if (!e.open) {
+    return h("div", { class: "email-start" },
+      h("button", { type: "button", class: "btn primary", onclick: () => { e.open = true; draftEmail(flagged); } }, "Write the email for me"),
+      h("p", { class: "hint" }, "We'll turn these questions into a short email you can edit and send."),
+    );
+  }
+  const tone = (t, label) => h("button", {
+    type: "button", role: "radio", class: "tone-opt", "aria-checked": String(e.tone === t), disabled: e.loading,
+    onclick: () => { if (e.tone !== t) { e.tone = t; draftEmail(flagged); } },
+  }, label);
+
+  return h("section", { class: "email", "aria-labelledby": "email-title" },
+    h("div", { class: "email-head" },
+      h("h2", { id: "email-title" }, "Your email"),
+      h("div", { class: "tone", role: "radiogroup", "aria-label": "Tone" }, tone("friendly", "Friendly"), tone("firm", "Firm")),
+    ),
+    e.loading && h("p", { class: "empty" }, "Writing it…"),
+    e.error && h("p", { class: "form-error" }, e.error),
+    e.draft && !e.loading && [
+      h("label", { class: "field-label", for: "email-subject" }, "Subject"),
+      h("input", { id: "email-subject", class: "email-subject", value: e.draft.subject, oninput: (ev) => (e.draft.subject = ev.target.value) }),
+      h("label", { class: "field-label", for: "email-body" }, "Message"),
+      h("textarea", { id: "email-body", class: "email-body", rows: "13", oninput: (ev) => (e.draft.body = ev.target.value) }, e.draft.body),
+      h("p", { class: "hint" }, "Fill in the names in [brackets] before you send it."),
+      h("div", { class: "email-actions" },
+        h("button", { type: "button", class: "btn primary", onclick: () => copy(`Subject: ${e.draft.subject}\n\n${e.draft.body}`, "Email copied.") }, "Copy email"),
+        h("a", { class: "btn quiet", href: `mailto:?subject=${encodeURIComponent(e.draft.subject)}&body=${encodeURIComponent(e.draft.body)}` }, "Open in my email app"),
+      ),
+    ],
+  );
+}
+
+async function draftEmail(flagged) {
+  const e = state.email;
+  const seq = ++e.seq; // ignore answers to an older request if the tone changed mid-flight
+  Object.assign(e, { loading: true, error: null });
+  renderPanel();
+  try {
+    const res = await fetch("/api/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tone: e.tone,
+        questions: flagged.slice(0, 15).map((i) => ({
+          heading: i.clause.number ? `Section ${i.clause.number}, ${i.clause.heading}` : i.clause.heading,
+          question: i.question,
+        })),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Couldn't write the email. Try again.");
+    if (seq === e.seq) e.draft = data;
+  } catch (err) {
+    if (seq === e.seq) e.error = err.message;
+  } finally {
+    if (seq === e.seq) { e.loading = false; renderPanel(); }
+  }
+}
 
 /* ---------- Under the hood ---------- */
 

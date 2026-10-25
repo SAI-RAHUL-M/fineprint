@@ -16,7 +16,7 @@ from pathlib import Path
 import uvicorn
 
 from fineprint.app import app
-from fineprint.schemas import CallMeta, ClassifyBatch, JuryBatch, VerifyBatch
+from fineprint.schemas import CallMeta, ClassifyBatch, EmailDraft, JuryBatch, VerifyBatch
 
 ROOT = Path(__file__).parents[1]
 EXPECTED: dict[str, str] = json.loads((ROOT / "samples" / "sketchy-lease.labels.json").read_text())[
@@ -98,6 +98,23 @@ class SlowFakeLLM:
                 for c, j in re.findall(r"clause_id (\d+), juror (a|b)", user)
             ]
             return VerifyBatch.model_validate({"checks": checks}), meta
+
+        if schema is EmailDraft:
+            asks = re.findall(r"^- \(([^)]*)\) (.+)$", user, flags=re.M)
+            lines = "\n".join(f"{n}. {q} ({heading})" for n, (heading, q) in enumerate(asks, 1))
+            firm = "Tone: polite but direct" in user
+            body = (
+                "Hi [Landlord name],\n\n"
+                + (
+                    "Before I sign, I'd like to get a few things in writing:\n\n"
+                    if firm
+                    else "Thanks again for showing me the apartment. I really like it! Before I sign, "
+                    "I had a few questions about the lease:\n\n"
+                )
+                + lines
+                + "\n\nThanks for your help,\n[Your name]"
+            )
+            return EmailDraft(subject="A few questions about the lease before I sign", body=body), meta
         raise AssertionError(schema)
 
 

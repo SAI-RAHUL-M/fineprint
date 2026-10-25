@@ -115,6 +115,21 @@ class ClauseResult(BaseModel):
     unverified: bool = False  # a juror's cited claim failed verification
 
 
+class EmailQuestion(BaseModel):
+    heading: str = Field(max_length=120)
+    question: str = Field(max_length=500)
+
+
+class EmailRequest(BaseModel):
+    questions: list[EmailQuestion] = Field(min_length=1, max_length=15)
+    tone: Literal["friendly", "firm"] = "friendly"
+
+
+class EmailDraft(BaseModel):
+    subject: str = Field(max_length=150)
+    body: str = Field(max_length=4000)
+
+
 class Report(BaseModel):
     clauses: list[ClauseResult]
     clarity_score: int

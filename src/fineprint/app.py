@@ -13,11 +13,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
+from . import prompts
 from .config import ROOT, get_settings
 from .llm import LLM, LLMError
 from .models import MODELS
 from .pipeline import Event, Pipeline
 from .retrieve import make_retriever
+from .schemas import EmailDraft, EmailRequest
 
 log = logging.getLogger(__name__)
 HERE = Path(__file__).parent
@@ -90,6 +92,24 @@ async def analyze(body: AnalyzeRequest, request: Request) -> StreamingResponse:
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@app.post("/api/email")
+async def email(body: EmailRequest, request: Request) -> EmailDraft:
+    llm = request.app.state.llm
+    if llm is None:
+        raise HTTPException(503, "MODEL_ACCESS_KEY is not configured on the server.")
+    user = prompts.email_user([(q.heading, q.question) for q in body.questions], body.tone)
+    try:
+        draft, _ = await llm.call_json(
+            "writer",
+            [{"role": "system", "content": prompts.EMAIL_SYSTEM}, {"role": "user", "content": user}],
+            EmailDraft,
+        )
+    except Exception as e:
+        log.exception("email draft failed")
+        raise HTTPException(502, "Couldn't write the email just now. Please try again.") from e
+    return draft
 
 
 async def with_heartbeat(chunks: AsyncIterator[str], every: float) -> AsyncIterator[str]:
