@@ -25,9 +25,10 @@ JUROR_SYSTEM = (
     "passages that support your explanation in cite_ids (only ids shown for that clause). If the passages do "
     "not cover the clause, use your general sense of typical leases, leave cite_ids empty, and never choose "
     "ask_about_this without a passage. For uncommon or ask_about_this, add one short, polite question_to_ask "
-    "the landlord.\n"
+    "the landlord, and set highlight to the 3-15 words of the clause that matter most, copied exactly as "
+    "written; otherwise highlight is null.\n"
     'Schema: {"verdicts": [{"clause_id": int, "label": "standard"|"uncommon"|"ask_about_this", '
-    '"explanation": str, "cite_ids": [str], "question_to_ask": str|null}]}'
+    '"explanation": str, "cite_ids": [str], "question_to_ask": str|null, "highlight": str|null}]}'
 )
 
 VERIFY_SYSTEM = (

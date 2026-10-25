@@ -162,6 +162,8 @@ class Pipeline:
                 continue  # model invented or misnumbered a clause
             allowed = {p.id for p in by_id[v.clause_id].passages}
             v.cite_ids = [c for c in v.cite_ids if c in allowed]
+            if v.highlight and _squash(v.highlight) not in _squash(by_id[v.clause_id].clause.text):
+                v.highlight = None  # only mark words that are really in the lease
             clean.append(v)
         return juror, clean
 
@@ -210,7 +212,9 @@ def _aggregate(r: ClauseResult) -> None:
     top = max(flags, key=lambda v: SEVERITY[v.label])
     r.label = top.label
     r.confidence = "high" if len(flags) == 2 else "maybe"
-    r.question_to_ask = next((v.question_to_ask for v in flags if v.question_to_ask), None)
+    by_severity = sorted(flags, key=lambda v: -SEVERITY[v.label])
+    r.question_to_ask = next((v.question_to_ask for v in by_severity if v.question_to_ask), None)
+    r.highlight = next((v.highlight for v in by_severity if v.highlight), None)
 
 
 def _report(results: list[ClauseResult], removed: int, source: str, calls: list[CallMeta]) -> Report:
@@ -232,6 +236,10 @@ def _report(results: list[ClauseResult], removed: int, source: str, calls: list[
         retrieval_source=source,
         calls=calls,
     )
+
+
+def _squash(text: str) -> str:
+    return " ".join(text.lower().split())
 
 
 async def _as_done[T](coros: Sequence[Awaitable[T]]) -> AsyncIterator[T]:

@@ -7,7 +7,7 @@
   --paper-edge: #e7e1d3;
   --ink: #1d1b17;
   --ink-2: #4a463e;
-  --ink-3: #7a7468;
+  --ink-3: #6a655a;
   --rule: #e2dccd;
 
   --pen: #b3261e;        /* red pen: ask about this */
@@ -161,7 +161,14 @@ mark, .hl { background: linear-gradient(104deg, transparent .4em, var(--marker) 
 .clause-summary { margin: 4px 0 6px; font-size: 15px; color: var(--ink); }
 .clause-summary:empty { display: none; }
 .clause-text { margin: 0; font-family: var(--serif); font-size: 16px; line-height: 1.7; color: var(--ink-2); white-space: pre-wrap; }
-.clause:not([aria-pressed="true"]) .clause-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* Normal clauses fold to two lines; flagged ones stay open so the marked words are visible. */
+.clause.l-standard:not([aria-pressed="true"]) .clause-text,
+.clause:not([class*="l-"]):not([aria-pressed="true"]) .clause-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.clause-text mark.hl { color: var(--ink); }
+.clause-text mark.hl.ask_about_this { text-decoration: underline; text-decoration-color: var(--pen); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.clause-note { margin: 8px 0 2px; font-family: var(--serif); font-style: italic; font-size: 16px; line-height: 1.45; color: var(--pen); }
+.l-uncommon .clause-note { color: var(--marker-ink); }
+.note-lead { font-style: normal; font-variant: small-caps; font-weight: 600; letter-spacing: .04em; }
 .clause + .clause { border-top: 1px solid var(--rule); }
 .clause + .clause:hover, .clause[aria-pressed="true"] + .clause { border-top-color: transparent; }
 

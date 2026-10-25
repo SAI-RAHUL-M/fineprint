@@ -63,6 +63,13 @@ COMMON = set(
 )
 
 
+def _phrase(block: str) -> str | None:
+    """A real run of words from the middle of the clause, like a reviewer would quote."""
+    body = block.split("\n", 1)[1].split("\n\nPassages:")[0]
+    words = re.sub(r"^\s*\d+\.\s*[A-Z ,&'/\-]+\.\s*", "", body).split()
+    return " ".join(words[4:13]) if len(words) > 13 else None
+
+
 class SlowFakeLLM:
     def __init__(self):
         self.turn = 0
@@ -123,6 +130,7 @@ class SlowFakeLLM:
                         "question_to_ask": f"Could you explain the {heading.lower()} terms, and is there flexibility here?"
                         if flagged
                         else None,
+                        "highlight": _phrase(block) if flagged else None,
                     }
                 )
             return JuryBatch.model_validate({"verdicts": verdicts}), meta

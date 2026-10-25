@@ -12,6 +12,10 @@ ROOT = Path(__file__).parents[1]
 LEASE = (ROOT / "samples" / "sketchy-lease.txt").read_text(encoding="utf-8")
 FLAG_A = {"Cleaning Fee", "Landlord Entry", "Renewal"}  # juror A flags these
 FLAG_B = {"Cleaning Fee", "Landlord Entry"}  # juror B agrees on two
+HIGHLIGHT = {
+    "Cleaning Fee": "Non-Refundable  cleaning and carpet replacement fee",  # real (case/space differ)
+    "Landlord Entry": "words that are not in the lease",  # invented: must be dropped
+}
 
 
 class FakeLLM:
@@ -43,6 +47,7 @@ class FakeLLM:
                         "explanation": "e",
                         "cite_ids": cite if flagged else [],
                         "question_to_ask": f"Q about {heading}?" if flagged else None,
+                        "highlight": HIGHLIGHT.get(heading) if flagged else None,
                     }
                 )
             verdicts.append({"clause_id": 999, "label": "standard", "explanation": "invented"})
@@ -79,6 +84,8 @@ async def test_jury_agreement_verification_and_score():
 
     assert by_heading["Cleaning Fee"]["label"] == "ask_about_this"
     assert by_heading["Cleaning Fee"]["confidence"] == "high"
+    assert by_heading["Cleaning Fee"]["highlight"].startswith("Non-Refundable")
+    assert by_heading["Landlord Entry"]["highlight"] is None
 
     renewal = by_heading["Renewal"]  # flagged by A only, and its citation was rejected
     assert renewal["confidence"] == "maybe"

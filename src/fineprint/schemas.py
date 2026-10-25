@@ -76,6 +76,7 @@ class Verdict(BaseModel):
     explanation: str = Field(max_length=600)
     cite_ids: list[str] = Field(default_factory=list)
     question_to_ask: str | None = None
+    highlight: str | None = Field(default=None, max_length=200)  # exact words from the clause to mark
 
 
 class JuryBatch(BaseModel):
@@ -112,6 +113,7 @@ class ClauseResult(BaseModel):
     label: Label = "standard"
     confidence: Confidence = "none"
     question_to_ask: str | None = None
+    highlight: str | None = None
     unverified: bool = False  # a juror's cited claim failed verification
 
 

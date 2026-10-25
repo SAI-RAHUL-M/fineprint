@@ -192,10 +192,12 @@ function onEvent(type, data) {
 function aggregate(it) {
   const flags = [it.a, it.b].filter((v) => v && v.label !== "standard");
   if (!it.a && !it.b) return;
-  if (!flags.length) { it.label = "standard"; it.confidence = "none"; it.question = null; return; }
-  it.label = flags.reduce((x, v) => (SEVERITY[v.label] > SEVERITY[x.label] ? v : x)).label;
+  if (!flags.length) { Object.assign(it, { label: "standard", confidence: "none", question: null, highlight: null }); return; }
+  flags.sort((x, y) => SEVERITY[y.label] - SEVERITY[x.label]);
+  it.label = flags[0].label;
   it.confidence = flags.length === 2 ? "high" : "maybe";
   it.question = flags.find((v) => v.question_to_ask)?.question_to_ask ?? null;
+  it.highlight = flags.find((v) => v.highlight)?.highlight ?? null;
 }
 
 function applyReport(report) {
@@ -206,7 +208,7 @@ function applyReport(report) {
     Object.assign(it, {
       cls: r.classification, passages: r.passages, a: r.juror_a, b: r.juror_b,
       label: r.juror_a || r.juror_b ? r.label : "standard",
-      confidence: r.confidence, question: r.question_to_ask, unverified: r.unverified,
+      confidence: r.confidence, question: r.question_to_ask, highlight: r.highlight, unverified: r.unverified,
     });
     updateClause(it);
   }
@@ -312,7 +314,17 @@ function clauseEl(it) {
     ),
     h("p", { class: "clause-summary" }),
     h("p", { class: "clause-text" }, stripHeading(c)),
+    h("p", { class: "clause-note", hidden: true }),
   );
+}
+
+/** Wrap the first case- and spacing-insensitive match of `phrase` in a <mark>, like a highlighter would. */
+function markPhrase(text, phrase, label) {
+  if (!phrase) return [text];
+  const words = phrase.trim().split(/\s+/).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const m = new RegExp(words.join("\\s+"), "i").exec(text);
+  if (!m) return [text];
+  return [text.slice(0, m.index), h("mark", { class: `hl ${label}` }, m[0]), text.slice(m.index + m[0].length)];
 }
 
 function stripHeading(c) {
@@ -327,6 +339,11 @@ function updateClause(it) {
   if (!el) return;
   el.className = `clause${it.label ? ` l-${it.label}` : ""}`;
   $(".clause-summary", el).textContent = it.cls?.summary ?? "";
+  $(".clause-text", el).replaceChildren(...markPhrase(stripHeading(it.clause), it.highlight, it.label).filter((n) => n !== ""));
+  const note = $(".clause-note", el);
+  const showNote = it.question && it.label && it.label !== "standard";
+  note.hidden = !showNote;
+  if (showNote) note.replaceChildren(h("span", { class: "note-lead" }, "Ask: "), it.question);
   const tag = $(".tag", el);
   if (it.label === "standard") {
     // Normal clauses get a quiet tick, like a reader who's checked them and moved on.
