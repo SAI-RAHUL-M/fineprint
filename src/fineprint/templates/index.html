@@ -48,20 +48,31 @@
           and mark the ones worth a question before you sign.
         </p>
 
+        <ol class="steps" aria-label="How it goes">
+          <li><span class="step-n">1</span><span><strong>Paste</strong> your lease</span></li>
+          <li><span class="step-n">2</span><span><strong>We mark it up</strong> in a minute</span></li>
+          <li><span class="step-n">3</span><span><strong>Ask</strong> the right questions</span></li>
+        </ol>
+
         <form id="lease-form" class="paste" novalidate>
           <label for="lease-text" class="paste-label">Your lease</label>
-          <textarea id="lease-text" name="text" rows="11" spellcheck="false"
+          <textarea id="lease-text" name="text" rows="8" spellcheck="false"
             placeholder="Paste the full text here. Copy it straight from the PDF your landlord sent you."
             aria-describedby="lease-help"></textarea>
           <div class="paste-foot">
-            <p id="lease-help" class="hint"><span id="char-count">0</span> characters. You can also drop a .txt file here. We don't keep a copy.</p>
+            <p id="lease-help" class="hint"><span id="char-count">0</span> characters · or drop a .txt file</p>
             <div class="actions">
-              <button type="button" id="sample-btn" class="btn link">No lease handy? Try ours</button>
+              <button type="button" id="sample-btn" class="btn secondary">See an example</button>
               <button type="submit" id="analyze-btn" class="btn primary">Mark it up</button>
             </div>
           </div>
           <p id="form-error" class="form-error" role="alert" hidden></p>
         </form>
+        <ul class="assure" aria-label="Good to know">
+          <li>Free</li>
+          <li>Nothing is stored</li>
+          <li>Explains, never judges legality</li>
+        </ul>
       </div>
 
       <figure class="specimen" aria-label="Example of a marked-up clause">
@@ -78,6 +89,11 @@
           </aside>
         </div>
         <figcaption>What you get back: every clause, read and annotated.</figcaption>
+        <ul class="legend" aria-label="What the marks mean">
+          <li><span class="key key-ask">red pen</span> Ask about this before signing</li>
+          <li><span class="key key-odd">highlighter</span> A bit unusual</li>
+          <li><span class="key key-ok">✓</span> Normal for a student lease</li>
+        </ul>
       </figure>
     </section>
 

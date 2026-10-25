@@ -373,3 +373,22 @@ textarea.is-dragging { border: 2px dashed var(--ink-3); background: var(--desk);
 /* Filtered view: matching clauses only, with a little room above the first one when we jump to it. */
 .clause { scroll-margin-top: 16px; }
 .filter-empty { padding: 24px 0; }
+
+/* Home page: steps, reassurance, legend */
+.steps { list-style: none; margin: -12px 0 28px; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 22px; }
+.steps li { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--ink-2); }
+.steps strong { color: var(--ink); font-weight: 600; }
+.step-n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  border: 1.5px solid var(--pen); color: var(--pen); font-family: var(--serif); font-weight: 600; font-size: 14px; }
+.assure { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; color: var(--ink-3); }
+.assure li::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+.legend { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 8px; font-size: 14px; color: var(--ink-2); }
+.legend li { display: flex; align-items: center; gap: 10px; }
+.key { display: inline-block; min-width: 92px; text-align: center; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 3px; }
+.key-ask { color: var(--pen); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.key-odd { background: var(--marker); color: var(--ink); }
+.key-ok { color: var(--ok); font-size: 15px; }
+@media (max-width: 680px) {
+  .steps { flex-direction: column; margin-top: -8px; }
+  .paste-foot .actions { flex-direction: row-reverse; }
+}
