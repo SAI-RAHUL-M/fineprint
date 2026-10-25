@@ -114,7 +114,6 @@ function showFormError(msg) {
 
 function showView(name) {
   $("#view-input").hidden = name !== "input";
-  $("#how").hidden = name !== "input";
   $("#view-results").hidden = name !== "results";
   window.scrollTo({ top: 0 });
 }
@@ -602,6 +601,7 @@ function emailBlock(flagged) {
     ),
     e.loading && h("p", { class: "empty" }, "Writing it…"),
     e.error && h("p", { class: "form-error" }, e.error),
+    e.error && !e.loading && h("button", { type: "button", class: "btn secondary", onclick: () => draftEmail(flagged) }, "Try again"),
     e.draft && !e.loading && [
       h("label", { class: "field-label", for: "email-subject" }, "Subject"),
       h("input", { id: "email-subject", class: "email-subject", value: e.draft.subject, oninput: (ev) => (e.draft.subject = ev.target.value) }),

@@ -81,7 +81,7 @@ a { color: inherit; }
 .wordmark { font-family: var(--serif); font-size: 26px; font-weight: 600; letter-spacing: -0.02em; text-decoration: none; }
 .wordmark span { font-style: italic; font-weight: 500; text-decoration: underline; text-decoration-color: var(--pen); text-decoration-thickness: 2px; text-underline-offset: 5px; }
 .masthead-nav { display: flex; gap: 20px; align-items: baseline; font-size: 14px; color: var(--ink-2); }
-.masthead-nav a { text-decoration: none; }
+.masthead-nav a { text-decoration: none; padding: 8px 0; }
 .masthead-nav a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .not-advice { color: var(--ink-3); }
 .theme { display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; padding: 2px; align-self: center; }
@@ -342,6 +342,7 @@ th { font-weight: 600; color: var(--ink-3); font-size: 12px; text-transform: upp
   .page { padding: 20px 18px; margin: 0 -16px; border-left: 0; border-right: 0; }
   .clause { margin: 0 -18px; padding-left: 15px; }
   .toolbar { gap: 12px; }
+  .checked { flex-basis: 100%; order: 3; }
   .filters { gap: 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
