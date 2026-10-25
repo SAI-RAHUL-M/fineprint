@@ -160,8 +160,7 @@ class Pipeline:
         for v in out.verdicts:
             if v.clause_id not in by_id:
                 continue  # model invented or misnumbered a clause
-            allowed = {p.id for p in by_id[v.clause_id].passages}
-            v.cite_ids = [c for c in v.cite_ids if c in allowed]
+            v.cite_ids = _match_ids(v.cite_ids, [p.id for p in by_id[v.clause_id].passages])
             if v.label == "ask_about_this" and not v.cite_ids:
                 v.label = "uncommon"  # "ask about this" must be backed by a guide passage
             if v.highlight and _squash(v.highlight) not in _squash(by_id[v.clause_id].clause.text):
@@ -238,6 +237,20 @@ def _report(results: list[ClauseResult], removed: int, source: str, calls: list[
         retrieval_source=source,
         calls=calls,
     )
+
+
+def _match_ids(cited: list[str], allowed: list[str]) -> list[str]:
+    """Map a model's citations onto the passage ids it was given, tolerating '[local:ab12]', 'AB12' etc.
+
+    Anything that doesn't correspond to a given passage is dropped.
+    """
+    by_hash = {a.split(":", 1)[-1].lower(): a for a in allowed}
+    out = []
+    for c in cited:
+        h = c.strip().strip("[]()").split(":", 1)[-1].strip().lower()
+        if (a := by_hash.get(h)) and a not in out:
+            out.append(a)
+    return out
 
 
 def _squash(text: str) -> str:

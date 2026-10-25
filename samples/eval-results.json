@@ -6,24 +6,24 @@
   "results": {
     "reviewer_a": {
       "n": 21,
-      "accuracy": 0.762,
+      "accuracy": 0.857,
       "flag_precision": 1.0,
       "flag_recall": 0.889,
-      "ask_recall": 0.571
+      "ask_recall": 0.857
     },
     "reviewer_b": {
       "n": 21,
-      "accuracy": 0.905,
+      "accuracy": 0.857,
       "flag_precision": 1.0,
       "flag_recall": 0.889,
-      "ask_recall": 1.0
+      "ask_recall": 0.857
     },
     "combined": {
       "n": 21,
-      "accuracy": 0.905,
+      "accuracy": 0.857,
       "flag_precision": 1.0,
       "flag_recall": 0.889,
-      "ask_recall": 1.0
+      "ask_recall": 0.857
     }
   }
 }

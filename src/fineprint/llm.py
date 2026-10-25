@@ -14,7 +14,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, ValidationError
 
 from .config import Settings
-from .models import MODELS, Role
+from .models import MODELS, REASONING_EFFORT, Role
 from .schemas import CallMeta
 
 log = logging.getLogger(__name__)
@@ -104,6 +104,7 @@ class LLM:
                     messages=messages,  # type: ignore[arg-type]
                     temperature=temperature,
                     max_completion_tokens=max_tokens,
+                    **({"reasoning_effort": REASONING_EFFORT[model]} if model in REASONING_EFFORT else {}),
                 )
                 text = (res.choices[0].message.content or "") if res.choices else ""
                 if not text.strip():

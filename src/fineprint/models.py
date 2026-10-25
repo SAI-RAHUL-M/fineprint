@@ -16,4 +16,8 @@ MODELS: dict[Role, tuple[str, str]] = {
     "writer": ("openai-gpt-oss-120b", "deepseek-3.2"),
 }
 
+# Per-model reasoning_effort overrides. Empty on purpose: "low" made gpt-oss-20b return empty answers
+# (forcing fallbacks), and on gpt-oss-120b it saved only ~20% of output while weakening its reviews.
+REASONING_EFFORT: dict[str, str] = {}
+
 ALL_MODELS: list[str] = list(dict.fromkeys(m for pair in MODELS.values() for m in pair))

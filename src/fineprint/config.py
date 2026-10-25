@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     classify_batch: int = 8
     jury_batch: int = 5
     passages_per_clause: int = 3
+    cache_size: int = 32  # repeat analyses/emails served from memory instead of the models
     heartbeat_s: float = 10.0  # SSE keep-alive interval while waiting on models
 
 

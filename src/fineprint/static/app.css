@@ -154,7 +154,7 @@ mark, .hl { background: linear-gradient(104deg, transparent .4em, var(--marker) 
 .progress-bar span { display: block; height: 100%; width: 0; background: var(--ink); transition: width .5s ease; }
 .progress p { margin: 10px 0 0; font-size: 14px; color: var(--ink-2); font-family: var(--serif); font-style: italic; }
 
-.toolbar { display: flex; align-items: center; gap: 20px; margin: 28px 0 0; padding: 0 0 12px; border-bottom: 1px solid var(--ink); flex-wrap: wrap; }
+.toolbar { scroll-margin-top: 12px; display: flex; align-items: center; gap: 20px; margin: 28px 0 0; padding: 0 0 12px; border-bottom: 1px solid var(--ink); flex-wrap: wrap; }
 .filters { display: flex; gap: 22px; flex-wrap: wrap; }
 .filter { border: 0; background: none; padding: 4px 0; cursor: pointer; color: var(--ink-3); font-weight: 500; border-bottom: 2px solid transparent; }
 .filter b { font-weight: 600; font-variant-numeric: tabular-nums; margin-left: 2px; }
@@ -174,7 +174,6 @@ mark, .hl { background: linear-gradient(104deg, transparent .4em, var(--marker) 
 .clause[aria-pressed="true"] { background: color-mix(in srgb, var(--desk) 70%, transparent); }
 .clause.l-ask_about_this { border-left-color: var(--pen); }
 .clause.l-uncommon { border-left-color: var(--marker); }
-.clause.is-dim { opacity: .35; }
 .clause-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .clause-num { font-family: var(--serif); color: var(--ink-3); font-variant-numeric: oldstyle-nums; min-width: 1.4em; }
 .clause-title { font-family: var(--serif); font-weight: 600; font-size: 18px; margin: 0; }
@@ -369,3 +368,7 @@ th { font-weight: 600; color: var(--ink-3); font-size: 12px; text-transform: upp
 }
 
 textarea.is-dragging { border: 2px dashed var(--ink-3); background: var(--desk); }
+
+/* Filtered view: matching clauses only, with a little room above the first one when we jump to it. */
+.clause { scroll-margin-top: 16px; }
+.filter-empty { padding: 24px 0; }

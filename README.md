@@ -38,6 +38,23 @@ uv run pytest                     # offline, no credits used
 uv run python scripts/smoke.py    # live: pings every model and the knowledge base
 ```
 
+## How well it works
+
+Averaged over 4 live runs on our hand-labelled sample lease (21 clauses; 7 we'd want a student to ask
+about, 2 that are a bit unusual). Results vary from run to run, so we report the average, not the best run:
+
+| | Label accuracy | Flag precision | Flag recall | Caught 'ask' clauses |
+|---|---|---|---|---|
+| Reviewer A (gpt-oss-120b) | 77% | 90% | 89% | 71% |
+| Reviewer B (gemma-4-31B-it) | 85% | 100% | 89% | 79% |
+| **Both, combined** | **80%** | **90%** | **89%** | **79% (about 5.5 of 7)** |
+
+The second model doesn't add much raw accuracy here. What it adds is a confidence signal the reader can
+see: when two model families flag a clause independently, it's marked "flagged by both reviewers".
+
+A full analysis costs about one cent in model usage (roughly 14 calls and 35k tokens) and takes 35–55
+seconds. Analyzing the same lease again is served from an in-memory cache, so it's free.
+
 ## Demo safety net and accuracy
 
 ```bash

@@ -112,3 +112,11 @@ async def test_ask_without_a_valid_citation_is_downgraded():
     pipeline = Pipeline(OneVerdict(), LocalCorpus(ROOT / "kb"), Settings(_env_file=None))
     _, [verdict] = await pipeline._judge("a", [ClauseResult(clause=clause)])
     assert verdict.label == "uncommon" and verdict.cite_ids == []
+
+
+def test_citation_ids_are_matched_leniently_but_never_invented():
+    from fineprint.pipeline import _match_ids
+
+    allowed = ["local:ab12cd34", "kb:99ff00aa"]
+    cited = ["[local:ab12cd34]", "AB12CD34", " kb:99FF00AA ", "local:deadbeef", "made-up"]
+    assert _match_ids(cited, allowed) == ["local:ab12cd34", "kb:99ff00aa"]

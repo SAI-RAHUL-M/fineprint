@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -14,6 +15,8 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
 from . import prompts
+from .cache import LRU
+from .cache import key as cache_key
 from .config import ROOT, get_settings
 from .demo import load as load_demo
 from .demo import replay as demo_replay
@@ -35,6 +38,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     app.state.settings = settings
     app.state.retriever = make_retriever(settings)
+    app.state.analyses = LRU[list[dict]](settings.cache_size)  # recorded events, replayed for repeat leases
+    app.state.emails = LRU[EmailDraft](settings.cache_size)
     try:
         app.state.llm = LLM(settings)
     except LLMError as e:
@@ -85,10 +90,14 @@ async def analyze(body: AnalyzeRequest, request: Request, demo: bool = False) ->
         if recorded is None:
             raise HTTPException(404, "No recorded demo yet. Run scripts/record_demo.py first.")
         events = demo_replay(recorded["events"])
+    elif (cached := state.analyses.get(k := cache_key("analyze", body.text))) is not None:
+        events = demo_replay(cached, speed=4)  # same lease as before: free, and still animates
     else:
         if state.llm is None:
             raise HTTPException(503, "MODEL_ACCESS_KEY is not configured on the server.")
-        events = Pipeline(state.llm, state.retriever, state.settings).run(body.text)
+        events = remember(
+            Pipeline(state.llm, state.retriever, state.settings).run(body.text), state.analyses, k
+        )
 
     async def stream() -> AsyncIterator[str]:
         try:
@@ -109,6 +118,8 @@ async def analyze(body: AnalyzeRequest, request: Request, demo: bool = False) ->
 async def email(body: EmailRequest, request: Request, demo: bool = False) -> EmailDraft:
     if demo and (recorded := load_demo(DEMO_RUN)) and body.tone in recorded["emails"]:
         return EmailDraft.model_validate(recorded["emails"][body.tone])
+    if (cached := request.app.state.emails.get(k := cache_key("email", body.model_dump()))) is not None:
+        return cached
     llm = request.app.state.llm
     if llm is None:
         raise HTTPException(503, "MODEL_ACCESS_KEY is not configured on the server.")
@@ -122,6 +133,7 @@ async def email(body: EmailRequest, request: Request, demo: bool = False) -> Ema
     except Exception as e:
         log.exception("email draft failed")
         raise HTTPException(502, "Couldn't write the email just now. Please try again.") from e
+    request.app.state.emails.put(k, draft)
     return draft
 
 
@@ -135,6 +147,17 @@ async def practice(body: PracticeRequest, request: Request) -> PracticeReply:
     except Exception as e:
         log.exception("practice turn failed")
         raise HTTPException(502, "The landlord didn't answer. Try sending that again.") from e
+
+
+async def remember(events: AsyncIterator[Event], cache: LRU[list[dict]], k: str) -> AsyncIterator[Event]:
+    """Pass events through, and cache them with their timing once the run finishes cleanly."""
+    t0 = time.perf_counter()
+    seen: list[dict] = []
+    async for e in events:
+        seen.append({"t": round(time.perf_counter() - t0, 3), "type": e.type, "data": e.data})
+        yield e
+    if seen and seen[-1]["type"] == "report":
+        cache.put(k, seen)
 
 
 async def with_heartbeat(chunks: AsyncIterator[str], every: float) -> AsyncIterator[str]:

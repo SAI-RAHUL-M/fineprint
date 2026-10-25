@@ -394,13 +394,14 @@ function updateCounts() {
   $("#n-uncommon").textContent = items.filter((i) => i.label === "uncommon").length;
 }
 
-$$(".filters .filter").forEach((b) => b.addEventListener("click", () => setFilter(b.dataset.filter)));
+$$(".filters .filter").forEach((b) => b.addEventListener("click", () => setFilter(b.dataset.filter, { jump: true })));
 $("#sheet-backdrop").addEventListener("click", () => select(null));
 $("#print-btn").addEventListener("click", () => window.print());
 // The printout shows the question list, so print with nothing selected.
 window.addEventListener("beforeprint", () => { if (state.selected != null) select(null); });
 
-function setFilter(f) {
+/** Filters show only the matching clauses; with `jump`, bring the first one into view. */
+function setFilter(f, { jump = false } = {}) {
   state.filter = f;
   $$(".filters .filter").forEach((b) => {
     const on = b.dataset.filter === f;
@@ -408,10 +409,26 @@ function setFilter(f) {
     b.setAttribute("aria-pressed", on);
   });
   state.items.forEach((it) => { const el = $(`#clause-${it.clause.id}`); if (el) applyFilter(el, it); });
+
+  const doc = $("#document");
+  const first = state.order.map((id) => $(`#clause-${id}`)).find((el) => el && !el.hidden);
+  let empty = $(".filter-empty", doc);
+  if (!first && f !== "all" && state.items.size) {
+    empty ??= doc.appendChild(h("p", { class: "filter-empty empty" }));
+    empty.textContent = f === "ask_about_this" ? "Nothing here needs a question." : "Nothing unusual in this lease.";
+  } else empty?.remove();
+
+  if (jump) {
+    // Instant, not smooth: hiding clauses changes the page height mid-scroll. Landing on the filter bar
+    // keeps the filters in view with the first match right under them.
+    // ("instant" also overrides the page's CSS smooth scrolling.)
+    window.scrollTo({ top: $(".toolbar").getBoundingClientRect().top + window.scrollY - 12, behavior: "instant" });
+    if (first && f !== "all") first.focus({ preventScroll: true });
+  }
 }
 
 function applyFilter(el, it) {
-  el.classList.toggle("is-dim", state.filter !== "all" && it.label !== state.filter);
+  el.hidden = state.filter !== "all" && it.label !== state.filter;
 }
 
 function countUp(out, target) {
@@ -435,7 +452,14 @@ function select(id) {
 
 function onClauseKey(e, id) {
   const idx = state.order.indexOf(id);
-  const move = (d) => { e.preventDefault(); $(`#clause-${state.order[idx + d]}`)?.focus(); };
+  const move = (d) => {
+    e.preventDefault();
+    // Skip clauses hidden by the current filter.
+    for (let i = idx + d; i >= 0 && i < state.order.length; i += d) {
+      const el = $(`#clause-${state.order[i]}`);
+      if (el && !el.hidden) return el.focus();
+    }
+  };
   if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(id); }
   else if (e.key === "ArrowDown" || e.key === "j") move(1);
   else if (e.key === "ArrowUp" || e.key === "k") move(-1);
