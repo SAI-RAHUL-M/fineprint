@@ -32,6 +32,31 @@ uv run pytest                     # offline, no credits used
 uv run python scripts/smoke.py    # live: pings every model and the knowledge base
 ```
 
+## Deploy to DigitalOcean App Platform
+
+The app ships as a Docker image (`Dockerfile`) and an App Platform spec (`.do/app.yaml`).
+
+1. Push this repo to GitHub as `SAI-RAHUL-M/fineprint` (or edit `github.repo` in `.do/app.yaml`).
+2. Create the app, either in the console (Create App → GitHub → this repo; it detects the Dockerfile)
+   or with the CLI:
+   ```bash
+   doctl apps create --spec .do/app.yaml
+   ```
+3. In the app's Settings → Environment Variables, set `MODEL_ACCESS_KEY` (and `KB_ID`, `DO_API_TOKEN`
+   once the knowledge base is ready). Mark the keys as encrypted.
+4. Every push to `main` redeploys. `GET /healthz` reports whether the model key and knowledge base are configured.
+
+The spec sets `disable_edge_cache: true` because the analysis streams over Server-Sent Events,
+which the CDN cache would otherwise buffer. The server also sends a keep-alive comment every 10 seconds
+while it waits on a model.
+
+Build and run the image locally:
+
+```bash
+docker build -t fineprint .
+docker run --rm -p 8080:8080 --env-file .env fineprint
+```
+
 ## License
 
 MIT

@@ -1,5 +1,6 @@
 """FastAPI app: serves the UI and streams analysis progress as Server-Sent Events."""
 
+import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator
@@ -85,13 +86,34 @@ async def analyze(body: AnalyzeRequest, request: Request) -> StreamingResponse:
             yield sse(Event("error", {"message": "Analysis failed. Please try again."}))
 
     return StreamingResponse(
-        stream(),
+        with_heartbeat(stream(), state.settings.heartbeat_s),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
+async def with_heartbeat(chunks: AsyncIterator[str], every: float) -> AsyncIterator[str]:
+    """Interleave SSE comments so proxies don't close the stream while a slow model call is running."""
+    it = aiter(chunks)
+    pending = asyncio.ensure_future(anext(it))
+    try:
+        while True:
+            done, _ = await asyncio.wait({pending}, timeout=every)
+            if not done:
+                yield ": keep-alive\n\n"
+                continue
+            try:
+                chunk = pending.result()
+            except StopAsyncIteration:
+                return
+            yield chunk
+            pending = asyncio.ensure_future(anext(it))
+    finally:
+        pending.cancel()
+
+
 def run() -> None:
+    """Local dev server with auto-reload. Production runs uvicorn directly (see Dockerfile)."""
     import uvicorn
 
-    uvicorn.run("fineprint.app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("fineprint.app:app", host="127.0.0.1", port=8000, reload=True)

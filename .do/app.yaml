@@ -1,0 +1,37 @@
+# DigitalOcean App Platform spec.
+# Create:  doctl apps create --spec .do/app.yaml
+# Update:  doctl apps update <app-id> --spec .do/app.yaml
+name: fineprint
+region: nyc
+
+# Required for Server-Sent Events: the CDN cache would otherwise buffer the analysis stream.
+disable_edge_cache: true
+
+services:
+  - name: web
+    github:
+      repo: SAI-RAHUL-M/fineprint
+      branch: main
+      deploy_on_push: true
+    source_dir: /
+    dockerfile_path: Dockerfile
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    health_check:
+      http_path: /healthz
+      initial_delay_seconds: 10
+      period_seconds: 10
+      timeout_seconds: 5
+      failure_threshold: 3
+    envs:
+      # Set the real values in the App Platform console (Settings -> Environment Variables),
+      # never in this file.
+      - key: MODEL_ACCESS_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: KB_ID
+        scope: RUN_TIME
+      - key: DO_API_TOKEN
+        scope: RUN_TIME
+        type: SECRET
