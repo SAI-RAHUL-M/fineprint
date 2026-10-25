@@ -27,38 +27,38 @@
 /* Dark: a lamp-lit desk rather than a black screen. Applied when chosen in the header,
    or when the system prefers dark and the reader hasn't picked light. Keep both blocks in sync. */
 :root[data-theme="dark"] {
-  --desk: #302d28;
-  --paper: #3b3832;
-  --paper-edge: #4d4840;
-  --ink: #f7f3ea;
-  --ink-2: #ddd6c8;
-  --ink-3: #c2b8a7;
-  --rule: #5a544a;
+  --desk: #1f1e1b;
+  --paper: #2a2925;
+  --paper-edge: #46423b;
+  --ink: #faf7f0;
+  --ink-2: #e4ded2;
+  --ink-3: #b9b0a0;
+  --rule: #3f3b35;
   --pen: #ffaa9c;
   --pen-wash: #4a2a24;
   --marker: #76621a;
   --marker-ink: #ffd970;
   --ok: #a3d6b2;
-  --button: #f6f2e9;
-  --button-ink: #302d28;
+  --button: #faf7f0;
+  --button-ink: #1f1e1b;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --desk: #302d28;
-    --paper: #3b3832;
-    --paper-edge: #4d4840;
-    --ink: #f7f3ea;
-    --ink-2: #ddd6c8;
-    --ink-3: #c2b8a7;
-    --rule: #5a544a;
+    --desk: #1f1e1b;
+    --paper: #2a2925;
+    --paper-edge: #46423b;
+    --ink: #faf7f0;
+    --ink-2: #e4ded2;
+    --ink-3: #b9b0a0;
+    --rule: #3f3b35;
     --pen: #ffaa9c;
     --pen-wash: #4a2a24;
     --marker: #76621a;
     --marker-ink: #ffd970;
     --ok: #a3d6b2;
-    --button: #f6f2e9;
-    --button-ink: #302d28;
+    --button: #faf7f0;
+    --button-ink: #1f1e1b;
     color-scheme: dark;
   }
 }
@@ -392,3 +392,31 @@ textarea.is-dragging { border: 2px dashed var(--ink-3); background: var(--desk);
   .steps { flex-direction: column; margin-top: -8px; }
   .paste-foot .actions { flex-direction: row-reverse; }
 }
+
+/* ---- Home layout v2: one calm column, a big paste box, the example below ---- */
+.start { grid-template-columns: 1fr; max-width: 900px; gap: 0; padding-top: 48px; padding-bottom: 24px; }
+.start h1 { font-size: clamp(44px, 7vw, 84px); }
+.start textarea { min-height: clamp(260px, 36vh, 480px); font-size: 17px; padding: 22px 24px; }
+.paste-foot { margin-top: 16px; }
+.paste-foot .btn { padding: 13px 24px; font-size: 16px; }
+.specimen { max-width: 900px; margin: 72px auto 0; width: 100%; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); grid-template-areas: "page caption" "page legend"; gap: 8px 48px; align-items: start; }
+.specimen-page { grid-area: page; }
+.specimen figcaption { grid-area: caption; margin: 8px 0 0; font-family: var(--serif); font-style: normal; font-size: 26px; line-height: 1.25; color: var(--ink); }
+.specimen .legend { grid-area: legend; margin-top: 18px; font-size: 15px; gap: 14px; }
+@media (max-width: 760px) {
+  .specimen { grid-template-columns: 1fr; grid-template-areas: "caption" "page" "legend"; gap: 18px; margin-top: 48px; }
+}
+
+/* Dark: crisp edges instead of soft shadows, which read as blur on a dark page. */
+:root[data-theme="dark"] .specimen-page, :root[data-theme="dark"] .page, :root[data-theme="dark"] textarea { box-shadow: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .specimen-page, :root:not([data-theme="light"]) .page, :root:not([data-theme="light"]) textarea { box-shadow: none; }
+}
+
+/* Practice checklist: box and tick share one flex line, so they stay aligned with the first text line. */
+.checklist li { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; }
+.checklist li::before { position: static; flex: none; width: 16px; height: 16px; margin-top: 3px; display: grid; place-items: center; font-family: var(--sans); font-size: 11px; font-weight: 700; line-height: 1; color: var(--paper); box-sizing: border-box; }
+.checklist li.done::before { content: "✓"; }
+.checklist li.done::after { content: none; }
+
+.how { max-width: 900px; }
