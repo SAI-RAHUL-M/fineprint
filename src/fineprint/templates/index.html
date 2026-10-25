@@ -3,14 +3,117 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Fineprint</title>
+  <title>Fineprint: understand your lease before you sign</title>
+  <meta name="description" content="A jury of open-weight AI models explains every clause of your lease in plain English and tells you what to ask your landlord.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232f5d50'/><path d='M10 9h12M10 14h12M10 19h7' stroke='white' stroke-width='2.5' stroke-linecap='round'/></svg>">
   <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js" defer></script>
 </head>
-<body>
-  <main class="wrap">
-    <h1>Fineprint</h1>
-    <p>Understand your lease before you sign. Educational tool, not legal advice.</p>
-    <p><em>The full interface is coming next. The streaming API is at <code>POST /api/analyze</code>.</em></p>
+<body data-juror-a="{{ models.juror_a[0] }}" data-juror-b="{{ models.juror_b[0] }}">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/" aria-label="Fineprint home">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7"/><path d="M10 9h12M10 14h12M10 19h7"/></svg>
+        <span>Fineprint</span>
+      </a>
+      <p class="disclaimer">Educational tool, not legal advice</p>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- Input view -->
+    <section id="view-input" class="view hero" aria-labelledby="hero-title">
+      <p class="eyebrow">For students signing a lease</p>
+      <h1 id="hero-title">Read the fine print <em>before</em> you sign.</h1>
+      <p class="lede">
+        Two open-weight AI models read every clause independently, compare it with plain-language tenant guides,
+        and tell you which ones are worth asking your landlord about. A third model drops anything it can't back with a source.
+      </p>
+
+      <form id="lease-form" class="paste-card" novalidate>
+        <label for="lease-text" class="paste-label">Paste your lease</label>
+        <textarea id="lease-text" name="text" rows="12" spellcheck="false"
+          placeholder="1. TERM. The Lease begins on…&#10;2. RENT. Tenants shall pay…" aria-describedby="lease-help"></textarea>
+        <div class="paste-foot">
+          <p id="lease-help" class="help"><span id="char-count">0</span> characters · nothing is stored</p>
+          <div class="actions">
+            <button type="button" id="sample-btn" class="btn ghost">Try a sample lease</button>
+            <button type="submit" id="analyze-btn" class="btn primary">Explain my lease</button>
+          </div>
+        </div>
+        <p id="form-error" class="form-error" role="alert" hidden></p>
+      </form>
+
+      <ul class="how" aria-label="How it works">
+        <li><b>1</b><span><strong>Split &amp; classify.</strong> Your lease becomes clauses: rent, deposit, entry, renewal…</span></li>
+        <li><b>2</b><span><strong>Two-model jury.</strong> gpt-oss and Qwen judge each clause separately. Agreement = confidence.</span></li>
+        <li><b>3</b><span><strong>Source check.</strong> Every flag must be backed by a tenant guide, or it's removed.</span></li>
+      </ul>
+    </section>
+
+    <!-- Results view -->
+    <section id="view-results" class="view results" hidden aria-labelledby="results-title">
+      <h1 id="results-title" class="sr-only">Lease analysis</h1>
+
+      <div class="summary-bar">
+        <div class="score" aria-live="polite">
+          <svg viewBox="0 0 120 120" class="ring" aria-hidden="true">
+            <circle cx="60" cy="60" r="52" class="ring-track"/>
+            <circle cx="60" cy="60" r="52" class="ring-fill" id="ring-fill"/>
+          </svg>
+          <div class="score-text">
+            <span id="score-value" class="score-value">–</span>
+            <span class="score-label">clarity</span>
+          </div>
+        </div>
+
+        <div class="summary-main">
+          <ol class="stages" id="stages" aria-label="Analysis progress" aria-live="polite">
+            <li data-stage="split"><i aria-hidden="true"></i><span>Split</span><small></small></li>
+            <li data-stage="classify"><i aria-hidden="true"></i><span>Classify</span><small></small></li>
+            <li data-stage="retrieve"><i aria-hidden="true"></i><span>Find guides</span><small></small></li>
+            <li data-stage="jury"><i aria-hidden="true"></i><span>Jury</span><small></small></li>
+            <li data-stage="verify"><i aria-hidden="true"></i><span>Verify sources</span><small></small></li>
+          </ol>
+          <div class="counts" role="group" aria-label="Filter clauses">
+            <button class="count is-active" data-filter="all" aria-pressed="true"><b id="n-all">0</b> clauses</button>
+            <button class="count ask" data-filter="ask_about_this" aria-pressed="false"><b id="n-ask">0</b> ask about</button>
+            <button class="count uncommon" data-filter="uncommon" aria-pressed="false"><b id="n-uncommon">0</b> uncommon</button>
+            <span class="badge" id="removed-badge" hidden></span>
+          </div>
+        </div>
+
+        <button type="button" id="new-btn" class="btn ghost small">New lease</button>
+      </div>
+
+      <div class="layout">
+        <article class="document" id="document" aria-label="Your lease, clause by clause"></article>
+
+        <aside class="panel" id="panel" aria-live="polite" aria-label="Details">
+          <div id="panel-body"></div>
+        </aside>
+      </div>
+
+      <details class="model-card" id="model-card" hidden>
+        <summary>How this was made: <span id="model-summary"></span></summary>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Role</th><th>Model</th><th>Time</th><th>Tokens in / out</th><th>Notes</th></tr></thead>
+            <tbody id="model-rows"></tbody>
+          </table>
+        </div>
+        <p class="help">All models are open-weight, served by DigitalOcean Serverless Inference. Retrieval: <span id="retrieval-src"></span>.</p>
+      </details>
+    </section>
   </main>
+
+  <footer class="foot">
+    <p>Fineprint explains; it doesn't judge legality. For help with your lease, talk to UMD Off-Campus Housing or Student Legal Aid.</p>
+    <p>Open source (MIT) · Built with open-weight models on DigitalOcean</p>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

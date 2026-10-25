@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from .config import ROOT, get_settings
 from .llm import LLM, LLMError
+from .models import MODELS
 from .pipeline import Event, Pipeline
 from .retrieve import make_retriever
 
@@ -51,7 +52,7 @@ def sse(event: Event) -> str:
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request, "index.html")
+    return templates.TemplateResponse(request, "index.html", {"models": MODELS})
 
 
 @app.get("/api/sample", response_class=PlainTextResponse)
