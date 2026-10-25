@@ -356,7 +356,8 @@ function renderPanel() {
   const it = state.items.get(state.selected);
   panel.classList.toggle("is-open", !!it);
   panel.classList.toggle("is-summary", !it);
-  $("#panel-body").replaceChildren(...(it ? clausePanel(it) : summaryPanel()));
+  const parts = (it ? clausePanel(it) : summaryPanel()).flat(Infinity).filter((p) => p instanceof Node);
+  $("#panel-body").replaceChildren(...parts);
 }
 
 function summaryPanel() {
