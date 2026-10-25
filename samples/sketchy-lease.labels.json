@@ -1,0 +1,26 @@
+{
+  "_note": "Expected labels for the demo lease, keyed by section number. Used for the eval / Trust page. 'ask' = ask_about_this.",
+  "expected": {
+    "1": "standard",
+    "2": "standard",
+    "3": "ask",
+    "4": "standard",
+    "5": "ask",
+    "6": "standard",
+    "7": "uncommon",
+    "8": "uncommon",
+    "9": "ask",
+    "10": "ask",
+    "11": "standard",
+    "12": "standard",
+    "13": "standard",
+    "14": "ask",
+    "15": "ask",
+    "16": "ask",
+    "17": "standard",
+    "18": "standard",
+    "19": "standard",
+    "20": "standard",
+    "21": "standard"
+  }
+}
