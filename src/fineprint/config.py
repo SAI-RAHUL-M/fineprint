@@ -17,9 +17,6 @@ class Settings(BaseSettings):
     kb_mcp_url: str = "https://kbaas.do-ai.run/v1/mcp"
     local_corpus_dir: Path = ROOT / "kb"
 
-    agent_endpoint: str = ""
-    agent_key: str = ""
-
     # Pipeline tuning
     llm_timeout_s: float = 90.0
     max_concurrency: int = 6
